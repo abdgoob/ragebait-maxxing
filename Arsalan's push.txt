@@ -1,4 +1,4 @@
-hey team its arsalan first local drop nothing pushed to github yet just cloned abdullahs empty repo here
+hey team its arsalan first drop is on github now merged with abdullah readme and zip
 
 what i added
 traps folder spike fake platform control trap plus factory
@@ -7,7 +7,8 @@ dev director thing that talks trash and queues patches every 2 deaths
 
 also threw in super basic player and level stubs so cmake actually builds. hussain you can overwrite player/level when your stuff is ready just keep the hooks traps use (getBounds kill respawn gravity scale flipped controls)
 
-build is cmake, need sfml 2.5 ish
+build is cmake, need sfml 2.5 ish (course sfml)
+
 mac if cmake not found: brew install cmake sfml@2
 then from repo:
 export PATH="/opt/homebrew/bin:$PATH"
@@ -15,15 +16,26 @@ mkdir build && cd build
 CMAKE_PREFIX_PATH=/opt/homebrew/opt/sfml@2 cmake ..
 cmake --build .
 ./ragebait_maxxing
-(wsl/linux use your lab sfml setup, same cmake steps usually)
+
+windows (native, not wsl if you already have sfml from lab or installer)
+install cmake from cmake.org installer and sfml 2.6 windows 64bit binaries from sfml-dev.org download page, pick visual studio version that matches what you use
+put sfml somewhere simple like C:\SFML and set env var SFML_DIR to C:\SFML (folder that has include and lib)
+open x64 native tools command prompt for vs or regular cmd if mingw make sure compiler matches sfml libs
+cd path\to\ragebait-maxxing
+mkdir build
+cd build
+cmake .. -DCMAKE_PREFIX_PATH=C:/SFML
+cmake --build . --config Release
+run build\Release\ragebait_maxxing.exe (or ragebait_maxxing.exe in build if single config)
+if cmake cant find sfml pass -DSFML_DIR=C:/SFML/lib/cmake/SFML or whatever path the sfml zip has
+
+wsl/linux use your lab sfml setup, same mkdir build cmake .. cmake --build . then ./ragebait_maxxing
 
 main.cpp is just my sandbox to test dont treat it as final game loop abdullah you still own menus and fake win
 
 folder map quick
 include and src split traps patches developer
 stubs are temporary
-
-when you pull later cmake at repo root should work on your machine if sfml installed
 
 update btw no vector no memory header just pointer arrays and new delete like we did in class. using namespace std everywhere. level owns traps and deletes them in destructor patch manager same vibe
 
