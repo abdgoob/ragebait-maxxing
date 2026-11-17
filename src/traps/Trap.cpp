@@ -10,7 +10,7 @@ Trap::Trap(const Position& pos, TrapKind kind)
     shape_.setPosition(pos_.getX(), pos_.getY());
 }
 
-Trap::~Trap() = default;
+Trap::~Trap() {}
 
 TrapKind Trap::getKind() const { return kind_; }
 bool Trap::isActive() const { return active_; }
