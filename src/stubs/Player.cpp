@@ -99,6 +99,7 @@ void Player::respawn(const Position& at) {
     spawn_ = at;
     velocity_ = Position(0.f, 0.f);
     alive_ = true;
+    onGround_ = false;
     body_.setPosition(pos_.getX(), pos_.getY());
 }
 

@@ -31,4 +31,6 @@ private:
     float patchTimer_;
 
     void freeActive();
+    PatchManager(const PatchManager& other);
+    PatchManager& operator=(const PatchManager& other);
 };

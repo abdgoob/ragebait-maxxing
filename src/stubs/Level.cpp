@@ -42,6 +42,13 @@ void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManage
 
     if (player.isAlive()) {
         player.applyGravity(baseGravity_, dt);
+        player.update(dt);
+        if (!player.isAlive()) {
+            dev.onPlayerDeath(player, 0);
+            dev.maybeDropPatch(player, *this, patches);
+            patches.applyQueued(player, *this);
+            return;
+        }
         checkTraps(player, dev, patches);
     }
 }

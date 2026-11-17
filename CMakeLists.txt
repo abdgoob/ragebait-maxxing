@@ -8,6 +8,7 @@ find_package(SFML 2.5 COMPONENTS system window graphics audio REQUIRED)
 
 set(SOURCES
     src/main.cpp
+    src/game/Game.cpp
     src/core/Position.cpp
     src/core/GameObject.cpp
     src/stubs/Player.cpp
