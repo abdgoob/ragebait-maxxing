@@ -4,20 +4,27 @@
 #include "stubs/Level.h"
 #include "stubs/Player.h"
 
-PatchManager::PatchManager() : patchTimer_(0.f) {}
+using namespace std;
 
-void PatchManager::queuePatch(std::unique_ptr<PatchEffect> patch) {
-    pending_ = std::move(patch);
+PatchManager::PatchManager() : activeCount_(0), patchTimer_(0.f) {
+    for (int i = 0; i < MAX_ACTIVE; ++i) {
+        active_[i].reset();
+    }
+}
+
+void PatchManager::queuePatch(unique_ptr<PatchEffect> patch) {
+    pending_ = move(patch);
 }
 
 void PatchManager::applyQueued(Player& player, Level& level) {
-    if (!pending_) return;
+    if (!pending_ || activeCount_ >= MAX_ACTIVE) return;
 
     pending_->apply(player, level);
     if (pending_->isTimed()) {
         patchTimer_ = pending_->getDuration();
     }
-    active_.push_back(std::move(pending_));
+    active_[activeCount_] = move(pending_);
+    ++activeCount_;
 }
 
 void PatchManager::update(float dt, Player& player, Level& level) {
@@ -28,28 +35,30 @@ void PatchManager::update(float dt, Player& player, Level& level) {
     if (patchTimer_ > 0.f) {
         patchTimer_ -= dt;
         if (patchTimer_ <= 0.f) {
-            for (auto& p : active_) {
-                if (p && p->isActive()) {
-                    p->revert(player, level);
+            for (int i = 0; i < activeCount_; ++i) {
+                if (active_[i] && active_[i]->isActive()) {
+                    active_[i]->revert(player, level);
                 }
+                active_[i].reset();
             }
-            active_.clear();
+            activeCount_ = 0;
         }
     }
 }
 
 bool PatchManager::hasPending() const { return pending_ != nullptr; }
 
-std::string PatchManager::peekNextAnnouncement() const {
+string PatchManager::peekNextAnnouncement() const {
     if (!pending_) return "";
     return pending_->getAnnouncement();
 }
 
 void PatchManager::clearAll(Player& player, Level& level) {
-    for (auto& p : active_) {
-        if (p) p->revert(player, level);
+    for (int i = 0; i < activeCount_; ++i) {
+        if (active_[i]) active_[i]->revert(player, level);
+        active_[i].reset();
     }
-    active_.clear();
+    activeCount_ = 0;
     pending_.reset();
     patchTimer_ = 0.f;
 }

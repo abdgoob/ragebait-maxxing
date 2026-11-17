@@ -2,6 +2,8 @@
 
 #include "traps/Trap.h"
 
+using namespace std;
+
 class ControlTrap : public Trap {
 public:
     ControlTrap(const Position& pos, float width, float height);

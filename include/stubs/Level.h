@@ -3,7 +3,9 @@
 #include "traps/Trap.h"
 #include <SFML/Graphics.hpp>
 #include <memory>
-#include <vector>
+#include <string>
+
+using namespace std;
 
 class Player;
 class DeveloperDirector;
@@ -13,10 +15,12 @@ class PatchManager;
 
 class Level {
 public:
-    Level();
-    explicit Level(const std::string& name);
+    static const int MAX_TRAPS = 32;
 
-    void addTrap(std::unique_ptr<Trap> trap);
+    Level();
+    explicit Level(const string& name);
+
+    void addTrap(unique_ptr<Trap> trap);
     void setBaseGravity(float g);
     float getBaseGravity() const;
 
@@ -26,11 +30,12 @@ public:
     void checkTraps(Player& player, DeveloperDirector& dev, PatchManager& patches);
     void resetTraps();
 
-    const std::string& getName() const;
+    const string& getName() const;
 
 private:
-    std::string name_;
-    std::vector<std::unique_ptr<Trap>> traps_;
+    string name_;
+    unique_ptr<Trap> traps_[MAX_TRAPS];
+    int trapCount_;
     float baseGravity_;
     sf::RectangleShape ground_;
 };

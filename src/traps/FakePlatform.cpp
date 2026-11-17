@@ -1,6 +1,8 @@
 #include "traps/FakePlatform.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 FakePlatform::FakePlatform(const Position& pos, float width, float height)
     : Trap(pos, TrapKind::FakePlatform),
       w_(width),
@@ -18,7 +20,7 @@ bool FakePlatform::hurtsPlayer(const Player& player) const {
 }
 
 void FakePlatform::onPlayerTouch(Player& player) {
-  (void)player;
+    (void)player;
     if (fallen_) return;
 
     const sf::FloatRect pb = player.getBounds();

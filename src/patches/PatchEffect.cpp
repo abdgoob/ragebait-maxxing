@@ -1,5 +1,7 @@
 #include "patches/PatchEffect.h"
 
+using namespace std;
+
 bool PatchEffect::isTimed() const { return false; }
 
 float PatchEffect::getDuration() const { return 0.f; }

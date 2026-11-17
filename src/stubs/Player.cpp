@@ -1,5 +1,7 @@
 #include "stubs/Player.h"
 
+using namespace std;
+
 namespace {
 const float kWidth = 28.f;
 const float kHeight = 36.f;

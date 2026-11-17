@@ -19,4 +19,6 @@ stubs are temporary
 
 when you pull later cmake at repo root should work on your machine if sfml installed
 
+update btw i removed vector and used fixed arrays instead (MAX_TRAPS, MAX_ACTIVE etc) and using namespace std in files so stuff isnt cluttered with std:: everywhere
+
 lmk if trap factory tags or patch timing feels wrong we can tweak before demo

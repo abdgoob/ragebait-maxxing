@@ -1,5 +1,8 @@
 #include "core/Position.h"
+
 #include <cmath>
+
+using namespace std;
 
 Position::Position() : x_(0.f), y_(0.f) {}
 
@@ -23,7 +26,7 @@ Position& Position::operator+=(const Position& other) {
 
 bool Position::operator==(const Position& other) const {
     const float eps = 0.001f;
-    return std::fabs(x_ - other.x_) < eps && std::fabs(y_ - other.y_) < eps;
+    return fabs(x_ - other.x_) < eps && fabs(y_ - other.y_) < eps;
 }
 
 bool Position::operator!=(const Position& other) const {

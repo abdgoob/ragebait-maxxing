@@ -5,13 +5,14 @@
 #include "stubs/Level.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 DeveloperDirector::DeveloperDirector() : mood_(3), deathsThisLevel_(0) {
-    genericTaunts_ = {
-        "skill issue tbh",
-        "working as intended",
-        "have you tried being good at the game",
-        "logged your death for analytics",
-        "this trap is actually fair if you think about it"};
+    genericTaunts_[0] = "skill issue tbh";
+    genericTaunts_[1] = "working as intended";
+    genericTaunts_[2] = "have you tried being good at the game";
+    genericTaunts_[3] = "logged your death for analytics";
+    genericTaunts_[4] = "this trap is actually fair if you think about it";
 }
 
 void DeveloperDirector::onPlayerDeath(Player& player, const Trap* trap) {
@@ -22,7 +23,7 @@ void DeveloperDirector::onPlayerDeath(Player& player, const Trap* trap) {
     if (trap) {
         lastTaunt_ = pickTaunt(trap->getKind());
     } else {
-        lastTaunt_ = genericTaunts_[deathsThisLevel_ % genericTaunts_.size()];
+        lastTaunt_ = genericTaunts_[deathsThisLevel_ % TAUNT_COUNT];
     }
 }
 
@@ -37,27 +38,28 @@ void DeveloperDirector::onRetry(Player& player) {
     lastTaunt_ = "respawned. try not to embarrass us both";
 }
 
-std::string DeveloperDirector::getLastTaunt() const { return lastTaunt_; }
+string DeveloperDirector::getLastTaunt() const { return lastTaunt_; }
 
-std::string DeveloperDirector::getLastPatchReason() const { return lastPatchReason_; }
+string DeveloperDirector::getLastPatchReason() const { return lastPatchReason_; }
 
 int DeveloperDirector::getMood() const { return mood_; }
 
 void DeveloperDirector::maybeDropPatch(Player& player, Level& level, PatchManager& pm) {
     (void)player;
+    (void)level;
 
     if (deathsThisLevel_ > 0 && deathsThisLevel_ % 2 == 0 && !pm.hasPending()) {
         if (deathsThisLevel_ % 4 == 0) {
             lastPatchReason_ = "you keep dying so im changing gravity";
-            pm.queuePatch(std::make_unique<GravityPatch>(1350.f));
+            pm.queuePatch(make_unique<GravityPatch>(1350.f));
         } else {
             lastPatchReason_ = "controls felt too intuitive";
-            pm.queuePatch(std::make_unique<ControlPatch>());
+            pm.queuePatch(make_unique<ControlPatch>());
         }
     }
 }
 
-std::string DeveloperDirector::pickTaunt(TrapKind kind) const {
+string DeveloperDirector::pickTaunt(TrapKind kind) const {
     switch (kind) {
         case TrapKind::Spike:
             return "did the moving spike look friendly?";

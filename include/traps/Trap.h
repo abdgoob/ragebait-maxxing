@@ -2,6 +2,8 @@
 
 #include "core/GameObject.h"
 
+using namespace std;
+
 class Player;
 
 enum class TrapKind {

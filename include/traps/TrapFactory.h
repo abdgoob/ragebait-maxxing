@@ -4,12 +4,14 @@
 #include <memory>
 #include <string>
 
+using namespace std;
+
 // factory bc proposal said so and its easier than new everywhere
 
 class TrapFactory {
 public:
-    static std::unique_ptr<Trap> create(TrapKind kind, const Position& pos);
+    static unique_ptr<Trap> create(TrapKind kind, const Position& pos);
 
     // string version for level files later maybe
-    static std::unique_ptr<Trap> createFromTag(const std::string& tag, const Position& pos);
+    static unique_ptr<Trap> createFromTag(const string& tag, const Position& pos);
 };

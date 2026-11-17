@@ -1,6 +1,8 @@
 #include "traps/ControlTrap.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 ControlTrap::ControlTrap(const Position& pos, float width, float height)
     : Trap(pos, TrapKind::ControlSwap), alreadyHit_(false) {
     shape_.setSize(sf::Vector2f(width, height));

@@ -2,6 +2,8 @@
 
 #include "traps/Trap.h"
 
+using namespace std;
+
 class FakePlatform : public Trap {
 public:
     FakePlatform(const Position& pos, float width, float height);

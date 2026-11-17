@@ -4,12 +4,14 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 
+using namespace std;
+
 class Player;
 
 class GameObject {
 public:
     GameObject();
-    GameObject(const Position& pos, const std::string& tag);
+    GameObject(const Position& pos, const string& tag);
     virtual ~GameObject();
 
     GameObject(const GameObject&) = delete;
@@ -23,13 +25,13 @@ public:
     void setPosition(float x, float y);
 
     int getId() const;
-    const std::string& getTag() const;
+    const string& getTag() const;
 
     static int getTotalObjects();
 
 protected:
     Position pos_;
-    std::string tag_;
+    string tag_;
     int id_;
 
     static int nextId_;

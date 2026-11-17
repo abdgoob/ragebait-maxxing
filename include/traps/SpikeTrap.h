@@ -2,6 +2,8 @@
 
 #include "traps/Trap.h"
 
+using namespace std;
+
 class SpikeTrap : public Trap {
 public:
     SpikeTrap(const Position& pos, float moveDistance, float speed);

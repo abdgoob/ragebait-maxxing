@@ -2,6 +2,8 @@
 #include "stubs/Level.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 ControlPatch::ControlPatch() : wasFlipped_(false) {}
 
 void ControlPatch::apply(Player& player, Level& level) {
@@ -17,9 +19,9 @@ void ControlPatch::revert(Player& player, Level& level) {
     markActive(false);
 }
 
-std::string ControlPatch::getVersion() const { return "v0.0.4-UX"; }
+string ControlPatch::getVersion() const { return "v0.0.4-UX"; }
 
-std::string ControlPatch::getAnnouncement() const {
+string ControlPatch::getAnnouncement() const {
     return "PATCH NOTES: improved movement clarity (left is right now)";
 }
 

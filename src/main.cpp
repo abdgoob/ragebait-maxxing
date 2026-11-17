@@ -8,6 +8,8 @@
 #include <iostream>
 #include <string>
 
+using namespace std;
+
 // tiny sandbox so we can show traps/patches without waiting on full game loop
 // abdullah/hussan can rip this out when menus and real player land
 
@@ -29,11 +31,11 @@ int main() {
 
     sf::Font font;
     if (!font.loadFromFile("/System/Library/Fonts/Supplemental/Arial.ttf")) {
-        std::cerr << "font failed, text might not show on your machine\n";
+        cerr << "font failed, text might not show on your machine\n";
     }
 
     sf::Clock clock;
-    std::string banner = "arrows move, space jump, R retry";
+    string banner = "arrows move, space jump, R retry";
 
     while (window.isOpen()) {
         sf::Event ev;
@@ -80,7 +82,7 @@ int main() {
         hud.setCharacterSize(16);
         hud.setFillColor(sf::Color(230, 210, 255));
         hud.setPosition(12.f, 8.f);
-        hud.setString(banner + " | deaths: " + std::to_string(player.getDeathCount()));
+        hud.setString(banner + " | deaths: " + to_string(player.getDeathCount()));
         window.draw(hud);
 
         window.display();

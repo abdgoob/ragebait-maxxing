@@ -3,16 +3,23 @@
 #include "patches/PatchManager.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 Level::Level() : Level("test chunk") {}
 
-Level::Level(const std::string& name) : name_(name), baseGravity_(900.f) {
+Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.f) {
     ground_.setSize(sf::Vector2f(900.f, 40.f));
     ground_.setPosition(0.f, 480.f);
     ground_.setFillColor(sf::Color(60, 60, 70));
+    for (int i = 0; i < MAX_TRAPS; ++i) {
+        traps_[i].reset();
+    }
 }
 
-void Level::addTrap(std::unique_ptr<Trap> trap) {
-    if (trap) traps_.push_back(std::move(trap));
+void Level::addTrap(unique_ptr<Trap> trap) {
+    if (!trap || trapCount_ >= MAX_TRAPS) return;
+    traps_[trapCount_] = move(trap);
+    ++trapCount_;
 }
 
 void Level::setBaseGravity(float g) { baseGravity_ = g; }
@@ -21,8 +28,8 @@ float Level::getBaseGravity() const { return baseGravity_; }
 void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManager& patches) {
     patches.update(dt, player, *this);
 
-    for (auto& trap : traps_) {
-        if (trap) trap->update(dt);
+    for (int i = 0; i < trapCount_; ++i) {
+        if (traps_[i]) traps_[i]->update(dt);
     }
 
     if (player.isAlive()) {
@@ -33,16 +40,15 @@ void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManage
 
 void Level::draw(sf::RenderTarget& target) const {
     target.draw(ground_);
-    for (const auto& trap : traps_) {
-        if (trap) trap->draw(target);
+    for (int i = 0; i < trapCount_; ++i) {
+        if (traps_[i]) traps_[i]->draw(target);
     }
 }
 
 void Level::checkTraps(Player& player, DeveloperDirector& dev, PatchManager& patches) {
-    for (auto& trap : traps_) {
+    for (int i = 0; i < trapCount_; ++i) {
+        Trap* trap = traps_[i].get();
         if (!trap || !trap->isActive()) continue;
-
-        const Trap* raw = trap.get();
 
         const sf::FloatRect pb = player.getBounds();
         const sf::FloatRect tb = trap->getBounds();
@@ -53,7 +59,7 @@ void Level::checkTraps(Player& player, DeveloperDirector& dev, PatchManager& pat
 
         if (trap->hurtsPlayer(player)) {
             player.kill();
-            dev.onPlayerDeath(player, raw);
+            dev.onPlayerDeath(player, trap);
             dev.maybeDropPatch(player, *this, patches);
             patches.applyQueued(player, *this);
             return;
@@ -62,9 +68,9 @@ void Level::checkTraps(Player& player, DeveloperDirector& dev, PatchManager& pat
 }
 
 void Level::resetTraps() {
-    for (auto& trap : traps_) {
-        if (trap) trap->reset();
+    for (int i = 0; i < trapCount_; ++i) {
+        if (traps_[i]) traps_[i]->reset();
     }
 }
 
-const std::string& Level::getName() const { return name_; }
+const string& Level::getName() const { return name_; }

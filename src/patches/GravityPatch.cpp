@@ -2,6 +2,8 @@
 #include "stubs/Level.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 GravityPatch::GravityPatch(float newGravity)
     : newGravity_(newGravity), oldGravity_(900.f), playerGravityBackup_(1.f) {}
 
@@ -20,9 +22,9 @@ void GravityPatch::revert(Player& player, Level& level) {
     markActive(false);
 }
 
-std::string GravityPatch::getVersion() const { return "v0.0.3-hotfix"; }
+string GravityPatch::getVersion() const { return "v0.0.3-hotfix"; }
 
-std::string GravityPatch::getAnnouncement() const {
+string GravityPatch::getAnnouncement() const {
     return "PATCH NOTES: gravity feels 'more realistic' now :)";
 }
 

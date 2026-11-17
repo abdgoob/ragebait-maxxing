@@ -2,6 +2,8 @@
 
 #include "core/GameObject.h"
 
+using namespace std;
+
 // temp player stub so my traps/patches compile, hussan owns the real one
 
 class Player : public GameObject {

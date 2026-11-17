@@ -1,5 +1,7 @@
 #pragma once
 
+using namespace std;
+
 // small 2d point for the game world, hussan might replace later idk
 
 class Position {

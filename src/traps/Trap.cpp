@@ -1,6 +1,8 @@
 #include "traps/Trap.h"
 #include "stubs/Player.h"
 
+using namespace std;
+
 Trap::Trap(const Position& pos, TrapKind kind)
     : GameObject(pos, "trap"), kind_(kind), active_(true) {
     shape_.setSize(sf::Vector2f(48.f, 24.f));

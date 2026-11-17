@@ -3,6 +3,8 @@
 
 #include <cmath>
 
+using namespace std;
+
 SpikeTrap::SpikeTrap(const Position& pos, float moveDistance, float speed)
     : Trap(pos, TrapKind::Spike),
       startX_(pos.getX()),
@@ -23,7 +25,7 @@ bool SpikeTrap::hurtsPlayer(const Player& player) const {
 
 void SpikeTrap::update(float dt) {
     t_ += dt;
-    float offset = std::sin(t_ * speed_) * moveDistance_;
+    float offset = sin(t_ * speed_) * moveDistance_;
     pos_.setX(startX_ + offset);
     shape_.setPosition(pos_.getX(), pos_.getY());
 }
