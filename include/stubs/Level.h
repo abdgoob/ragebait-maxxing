@@ -2,7 +2,6 @@
 
 #include "traps/Trap.h"
 #include <SFML/Graphics.hpp>
-#include <memory>
 #include <string>
 
 using namespace std;
@@ -19,8 +18,9 @@ public:
 
     Level();
     explicit Level(const string& name);
+    ~Level();
 
-    void addTrap(unique_ptr<Trap> trap);
+    void addTrap(Trap* trap);
     void setBaseGravity(float g);
     float getBaseGravity() const;
 
@@ -34,8 +34,11 @@ public:
 
 private:
     string name_;
-    unique_ptr<Trap> traps_[MAX_TRAPS];
+    Trap* traps_[MAX_TRAPS];
     int trapCount_;
     float baseGravity_;
     sf::RectangleShape ground_;
+
+    Level(const Level& other);
+    Level& operator=(const Level& other);
 };

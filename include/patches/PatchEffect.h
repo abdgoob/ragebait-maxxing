@@ -9,7 +9,7 @@ class Level;
 
 class PatchEffect {
 public:
-    virtual ~PatchEffect() = default;
+    virtual ~PatchEffect() {}
 
     virtual void apply(Player& player, Level& level) = 0;
     virtual void revert(Player& player, Level& level) = 0;

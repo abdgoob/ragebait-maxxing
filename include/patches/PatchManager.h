@@ -1,7 +1,6 @@
 #pragma once
 
 #include "patches/PatchEffect.h"
-#include <memory>
 #include <string>
 
 using namespace std;
@@ -14,8 +13,9 @@ public:
     static const int MAX_ACTIVE = 8;
 
     PatchManager();
+    ~PatchManager();
 
-    void queuePatch(unique_ptr<PatchEffect> patch);
+    void queuePatch(PatchEffect* patch);
     void applyQueued(Player& player, Level& level);
     void update(float dt, Player& player, Level& level);
 
@@ -25,8 +25,10 @@ public:
     void clearAll(Player& player, Level& level);
 
 private:
-    unique_ptr<PatchEffect> active_[MAX_ACTIVE];
+    PatchEffect* active_[MAX_ACTIVE];
     int activeCount_;
-    unique_ptr<PatchEffect> pending_;
+    PatchEffect* pending_;
     float patchTimer_;
+
+    void freeActive();
 };

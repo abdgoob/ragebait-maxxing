@@ -51,10 +51,10 @@ void DeveloperDirector::maybeDropPatch(Player& player, Level& level, PatchManage
     if (deathsThisLevel_ > 0 && deathsThisLevel_ % 2 == 0 && !pm.hasPending()) {
         if (deathsThisLevel_ % 4 == 0) {
             lastPatchReason_ = "you keep dying so im changing gravity";
-            pm.queuePatch(make_unique<GravityPatch>(1350.f));
+            pm.queuePatch(new GravityPatch(1350.f));
         } else {
             lastPatchReason_ = "controls felt too intuitive";
-            pm.queuePatch(make_unique<ControlPatch>());
+            pm.queuePatch(new ControlPatch());
         }
     }
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "traps/Trap.h"
-#include <memory>
 #include <string>
 
 using namespace std;
@@ -10,8 +9,6 @@ using namespace std;
 
 class TrapFactory {
 public:
-    static unique_ptr<Trap> create(TrapKind kind, const Position& pos);
-
-    // string version for level files later maybe
-    static unique_ptr<Trap> createFromTag(const string& tag, const Position& pos);
+    static Trap* create(TrapKind kind, const Position& pos);
+    static Trap* createFromTag(const string& tag, const Position& pos);
 };

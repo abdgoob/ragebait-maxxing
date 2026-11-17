@@ -14,9 +14,6 @@ public:
     GameObject(const Position& pos, const string& tag);
     virtual ~GameObject();
 
-    GameObject(const GameObject&) = delete;
-    GameObject& operator=(const GameObject&) = delete;
-
     virtual void update(float dt) = 0;
     virtual void draw(sf::RenderTarget& target) const = 0;
 
@@ -36,4 +33,8 @@ protected:
 
     static int nextId_;
     static int objectCount_;
+
+private:
+    GameObject(const GameObject& other);
+    GameObject& operator=(const GameObject& other);
 };

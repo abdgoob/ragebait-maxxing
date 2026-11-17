@@ -12,13 +12,21 @@ Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.
     ground_.setPosition(0.f, 480.f);
     ground_.setFillColor(sf::Color(60, 60, 70));
     for (int i = 0; i < MAX_TRAPS; ++i) {
-        traps_[i].reset();
+        traps_[i] = 0;
     }
 }
 
-void Level::addTrap(unique_ptr<Trap> trap) {
+Level::~Level() {
+    for (int i = 0; i < trapCount_; ++i) {
+        delete traps_[i];
+        traps_[i] = 0;
+    }
+    trapCount_ = 0;
+}
+
+void Level::addTrap(Trap* trap) {
     if (!trap || trapCount_ >= MAX_TRAPS) return;
-    traps_[trapCount_] = move(trap);
+    traps_[trapCount_] = trap;
     ++trapCount_;
 }
 
@@ -47,7 +55,7 @@ void Level::draw(sf::RenderTarget& target) const {
 
 void Level::checkTraps(Player& player, DeveloperDirector& dev, PatchManager& patches) {
     for (int i = 0; i < trapCount_; ++i) {
-        Trap* trap = traps_[i].get();
+        Trap* trap = traps_[i];
         if (!trap || !trap->isActive()) continue;
 
         const sf::FloatRect pb = player.getBounds();
