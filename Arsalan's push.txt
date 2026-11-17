@@ -5,11 +5,17 @@ traps folder spike fake platform control trap plus factory
 patches gravity control and patchmanager
 dev director thing that talks trash and queues patches every 2 deaths
 
-also threw in super basic player and level stubs so cmake actually builds. hussan you can overwrite player/level when your stuff is ready just keep the hooks traps use (getBounds kill respawn gravity scale flipped controls)
+also threw in super basic player and level stubs so cmake actually builds. hussain you can overwrite player/level when your stuff is ready just keep the hooks traps use (getBounds kill respawn gravity scale flipped controls)
 
-build is cmake, need sfml 2.5
-mkdir build cd build cmake .. make
-run ragebait_maxxing binary
+build is cmake, need sfml 2.5 ish
+mac if cmake not found: brew install cmake sfml@2
+then from repo:
+export PATH="/opt/homebrew/bin:$PATH"
+mkdir build && cd build
+CMAKE_PREFIX_PATH=/opt/homebrew/opt/sfml@2 cmake ..
+cmake --build .
+./ragebait_maxxing
+(wsl/linux use your lab sfml setup, same cmake steps usually)
 
 main.cpp is just my sandbox to test dont treat it as final game loop abdullah you still own menus and fake win
 
