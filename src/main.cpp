@@ -6,6 +6,7 @@ using namespace std;
 int main() {
     sf::RenderWindow window(sf::VideoMode(960, 540), "ragebait maxxing");
     window.setFramerateLimit(60);
+    // holding R should not keep respawning the player
     window.setKeyRepeatEnabled(false);
     Game game;
     sf::Clock clock;
@@ -32,9 +33,10 @@ int main() {
         }
         if (!window.isOpen()) break;
         if (!changedState && window.hasFocus()) {
-            game.update(dt, sf::Keyboard::isKeyPressed(sf::Keyboard::Left),
-                        sf::Keyboard::isKeyPressed(sf::Keyboard::Right),
-                        sf::Keyboard::isKeyPressed(sf::Keyboard::Space));
+            bool left = sf::Keyboard::isKeyPressed(sf::Keyboard::Left);
+            bool right = sf::Keyboard::isKeyPressed(sf::Keyboard::Right);
+            bool jump = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
+            game.update(dt, left, right, jump);
         }
         window.clear(sf::Color(25, 22, 35));
         game.draw(window);

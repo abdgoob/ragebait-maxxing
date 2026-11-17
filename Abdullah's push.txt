@@ -1,0 +1,35 @@
+hey team its abdullah first logic part is in now
+
+what i added
+game class for start pause resume retry and going back to menu
+main just handles the window and keyboard now game keeps the player level dev and patches
+no gui yet messages just show in the console
+
+controls for now
+enter starts from menu
+arrows move space jumps
+escape pauses and resumes
+r retries when playing or dead
+m goes back to menu then enter starts fresh
+switching windows pauses too press escape when you come back
+
+fixed the sandbox not moving because player update wasnt being called
+level does that now after gravity before checking traps so dont update player again in main
+retry resets traps and respawns but keeps patches and death count
+new game clears patches and resets player deaths gravity and dev stuff
+holding r should only retry once until you release and press it again
+
+hussan player and level are still your stubs just kept the hooks working
+arsalan traps patches and dev are still using your classes
+no vector no memory header no extra libraries just basic classes bools enum and if checks like the existing code
+keeping the same include and src split
+
+build steps are in arsalan push txt same cmake and sfml 2 setup
+compiler is here but sfml headers and cmake are missing on this machine so couldnt build or try the keys yet
+checked git diff for whitespace issues that passed
+
+when you run it try start move jump die retry then pause and resume
+die twice and retry to check the control patch stays then wears off during play
+also check paused time doesnt use up the patch and menu then enter resets deaths and controls
+
+ghosts saves and fake win logic are for the next parts

@@ -16,6 +16,8 @@ Game::~Game() { patches_.clearAll(player_, level_); }
 
 void Game::start() {
     if (state_ != GameState::Menu) return;
+
+    // new game starts clean, retry below keeps the patches
     patches_.clearAll(player_, level_);
     player_ = Player(Position(80.f, 380.f));
     level_.setBaseGravity(900.f);
@@ -41,6 +43,7 @@ void Game::resume() {
 
 void Game::retry() {
     if (state_ != GameState::Playing && state_ != GameState::Dead) return;
+
     patches_.applyQueued(player_, level_);
     level_.resetTraps();
     dev_.onRetry(player_);
@@ -56,6 +59,7 @@ void Game::returnToMenu() {
 
 void Game::update(float dt, bool left, bool right, bool jump) {
     if (state_ != GameState::Playing || dt <= 0.f) return;
+
     player_.handleInput(left, right, jump);
     level_.update(dt, player_, dev_, patches_);
     if (!player_.isAlive()) {
