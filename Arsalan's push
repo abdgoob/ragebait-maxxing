@@ -1,0 +1,22 @@
+hey team its arsalan first local drop nothing pushed to github yet just cloned abdullahs empty repo here
+
+what i added
+traps folder spike fake platform control trap plus factory
+patches gravity control and patchmanager
+dev director thing that talks trash and queues patches every 2 deaths
+
+also threw in super basic player and level stubs so cmake actually builds. hussan you can overwrite player/level when your stuff is ready just keep the hooks traps use (getBounds kill respawn gravity scale flipped controls)
+
+build is cmake, need sfml 2.5
+mkdir build cd build cmake .. make
+run ragebait_maxxing binary
+
+main.cpp is just my sandbox to test dont treat it as final game loop abdullah you still own menus and fake win
+
+folder map quick
+include and src split traps patches developer
+stubs are temporary
+
+when you pull later cmake at repo root should work on your machine if sfml installed
+
+lmk if trap factory tags or patch timing feels wrong we can tweak before demo
