@@ -43,7 +43,8 @@ void Player::update(float dt) {
 }
 
 void Player::draw(sf::RenderTarget& target) const {
-    if (alive_) target.draw(body_);
+    if (!alive_) return;
+    target.draw(body_);
 }
 
 void Player::applyGravity(float strength, float dt) {
@@ -99,6 +100,7 @@ void Player::respawn(const Position& at) {
     spawn_ = at;
     velocity_ = Position(0.f, 0.f);
     alive_ = true;
+    // spawn might be in the air, gravity checks the ground again
     onGround_ = false;
     body_.setPosition(pos_.getX(), pos_.getY());
 }

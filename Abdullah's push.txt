@@ -33,3 +33,9 @@ die twice and retry to check the control patch stays then wears off during play
 also check paused time doesnt use up the patch and menu then enter resets deaths and controls
 
 ghosts saves and fake win logic are for the next parts
+
+small update kept level and player in the same style as arsalan code
+level uses the same early return checks as traps then moves player and checks hits
+player draw uses the same alive check style too
+respawn still resets the ground bool so jumping doesnt use the last attempt state
+kept the original constructors arrays constants and getters no extra classes or libraries

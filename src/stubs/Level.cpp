@@ -40,17 +40,20 @@ void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManage
         if (traps_[i]) traps_[i]->update(dt);
     }
 
-    if (player.isAlive()) {
-        player.applyGravity(baseGravity_, dt);
-        player.update(dt);
-        if (!player.isAlive()) {
-            dev.onPlayerDeath(player, 0);
-            dev.maybeDropPatch(player, *this, patches);
-            patches.applyQueued(player, *this);
-            return;
-        }
-        checkTraps(player, dev, patches);
+    if (!player.isAlive()) return;
+
+    // move first so traps check where the player is now
+    player.applyGravity(baseGravity_, dt);
+    player.update(dt);
+
+    if (!player.isAlive()) {
+        dev.onPlayerDeath(player, 0);
+        dev.maybeDropPatch(player, *this, patches);
+        patches.applyQueued(player, *this);
+        return;
     }
+
+    checkTraps(player, dev, patches);
 }
 
 void Level::draw(sf::RenderTarget& target) const {
