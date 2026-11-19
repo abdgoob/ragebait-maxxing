@@ -39,6 +39,8 @@ private:
     float baseGravity_;
     sf::RectangleShape ground_;
 
+    void keepOnGround(Player& player);
+
     Level(const Level& other);
     Level& operator=(const Level& other);
 };

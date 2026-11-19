@@ -6,7 +6,6 @@
 using namespace std;
 
 Level::Level() : Level("test chunk") {}
-
 Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.f) {
     ground_.setSize(sf::Vector2f(900.f, 40.f));
     ground_.setPosition(0.f, 480.f);
@@ -45,6 +44,7 @@ void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManage
     // move first so traps check where the player is now
     player.applyGravity(baseGravity_, dt);
     player.update(dt);
+    keepOnGround(player);
 
     if (!player.isAlive()) {
         dev.onPlayerDeath(player, 0);
@@ -83,6 +83,21 @@ void Level::checkTraps(Player& player, DeveloperDirector& dev, PatchManager& pat
             return;
         }
     }
+}
+
+void Level::keepOnGround(Player& player) {
+    if (!player.isAlive()) return;
+
+    const sf::FloatRect pb = player.getBounds();
+    const sf::FloatRect gb = ground_.getGlobalBounds();
+
+    // off the end of the ground means you fall and die
+    if (pb.left + pb.width <= gb.left || pb.left >= gb.left + gb.width) return;
+    if (pb.top + pb.height < gb.top) return;
+    // already sunk past the edge, dont pop back up through the side
+    if (pb.top + pb.height > gb.top + pb.height) return;
+
+    player.landOn(gb.top);
 }
 
 void Level::resetTraps() {

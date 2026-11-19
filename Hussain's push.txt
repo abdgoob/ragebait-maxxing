@@ -1,0 +1,33 @@
+hey team its hussain first part of my stuff is in, task 2 player movement and physics
+
+what i changed
+player in stubs/Player is the real one now, kept it in the same folder so none of your includes break
+movement speeds up and slows down instead of snapping to full speed
+jump has coyote time (can still jump a split second after walking off a ledge) and a jump buffer (pressing space just before landing still jumps)
+letting go of space early gives a short hop, holding gives the full jump
+holding space doesnt keep bouncing, you have to press again
+falling speed is capped so you dont go through the floor on a lag spike
+added respawn() with no args that uses the spawn point, the old respawn(pos) still works
+position has operator* now so velocity * dt works (pos_ += velocity_ * dt)
+
+level does the landing now instead of player hard coding y 440
+player now stands exactly on top of the ground (y 444 since ground top is 480 and player is 36 tall), before it floated 4px above
+walk off the end of the ground (x past 900) and you fall and die, thats the falling off the stage rule from the proposal
+
+bug fix heads up
+the repo didnt compile before this, game start does player_ = Player(...) but GameObject blocks copying so it was a compile error
+nobody could build yet so it didnt show up. fixed it on the player side with a player operator= that copies everything except the object id
+abdullah no changes needed in game cpp
+
+hooks you all use are the same
+getBounds kill respawn applyGravity handleInput gravity scale flipped controls death count spawn point
+new ones landOn isOnGround getVelocity respawn()
+
+things i noticed in your parts, not changed
+arsalan gravity patch sets level base gravity AND player gravity scale, so gravity gets multiplied twice (1800 patch ends up like 3600)
+the sandbox spikes sit at y 420 to 440 but the ground starts at 480 so they float above the floor, you only die if you jump into them
+
+no vector no memory header same style as before
+checked it with a test build without real sfml (sfml not set up on my machine yet), will run the actual window once sfml is in
+
+next for me platforms and collisions, then exits, then checkpoints

@@ -24,6 +24,11 @@ Position& Position::operator+=(const Position& other) {
     return *this;
 }
 
+// used for velocity * dt
+Position Position::operator*(float scale) const {
+    return Position(x_ * scale, y_ * scale);
+}
+
 bool Position::operator==(const Position& other) const {
     const float eps = 0.001f;
     return fabs(x_ - other.x_) < eps && fabs(y_ - other.y_) < eps;
