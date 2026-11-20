@@ -4,10 +4,15 @@
 
 using namespace std;
 
-Game::Game()
-    : player_(Position(80.f, 444.f)), level_("01 everything is fine"), state_(GameState::Menu), chapter_(1) {
+Game::Game() : Game("assets/") {}
+
+Game::Game(const string& assetFolder)
+    : player_(Position(80.f, 444.f)), level_("01 everything is fine"),
+      state_(GameState::Menu), chapter_(1), ui_(assetFolder), quit_(false),
+      finalVictory_(false), ghostReplayEnabled_(false), interfacePopupEnabled_(false),
+      chapterStartDeaths_(0), shownPatch_(0), messageTimer_(0.f),
+      patchPopupTimer_(0.f), stateTimer_(0.f), runTime_(0.f) {
     loadChapter(1);
-    cout << "menu: Enter starts, M returns here, walk right to swap chapters for now\n";
 }
 
 Game::~Game() { patches_.clearAll(player_, level_); }
@@ -26,76 +31,300 @@ void Game::loadChapter(int n) {
     dev_ = DeveloperDirector();
     dev_.setPatchHappy(chapter_ == 3);
     dev_.onLevelStart(level_);
+    chapterStartDeaths_ = player_.getDeathCount();
+    shownPatch_ = patches_.getAnnouncementCount();
+    patchPopupTimer_ = 0.f;
+    stateTimer_ = 0.f;
+    attempts_.clear();
+    attempts_.startAttempt(player_.getPosition());
+    ghostReplayEnabled_ = false;
+    interfacePopupEnabled_ = false;
+    popup_.reset();
+    showMessage(dev_.getLastTaunt());
+}
+
+void Game::showMessage(const string& words) {
+    message_ = words;
+    messageTimer_ = 5.f;
+    cout << words << "\n";
 }
 
 void Game::start() {
     if (state_ != GameState::Menu) return;
-
+    patches_.clearAll(player_, level_);
+    // a new run really is fresh, retries still keep the deaths
+    player_ = Player(Position(80.f, 444.f));
+    runTime_ = 0.f;
+    finalVictory_ = false;
     loadChapter(1);
     state_ = GameState::Playing;
-    cout << dev_.getLastTaunt() << "\n";
-    cout << "arrows move, space jumps, Escape pauses, R retries\n";
+    sounds_.play(SoundCue::Click);
 }
 
 void Game::pause() {
     if (state_ != GameState::Playing) return;
     state_ = GameState::Paused;
-    cout << "paused: Escape resumes\n";
+    popup_.release();
+    sounds_.stopAll();
 }
 
 void Game::resume() {
     if (state_ != GameState::Paused) return;
     state_ = GameState::Playing;
-    cout << "resumed\n";
+    sounds_.play(SoundCue::Click);
 }
 
 void Game::retry() {
     if (state_ != GameState::Playing && state_ != GameState::Dead) return;
-
+    // manual retry also counts as an attempt for the future ghost chapter
+    if (state_ == GameState::Playing) attempts_.finishAttempt();
     patches_.applyQueued(player_, level_);
     level_.resetTraps();
     dev_.onRetry(player_);
+    attempts_.startAttempt(player_.getPosition());
+    popup_.reset();
     state_ = GameState::Playing;
-    cout << dev_.getLastTaunt() << "\n";
+    showMessage(dev_.getLastTaunt());
+    sounds_.play(SoundCue::Click);
 }
 
 void Game::returnToMenu() {
     if (state_ == GameState::Menu) return;
     state_ = GameState::Menu;
-    cout << "menu: Enter starts a fresh game\n";
+    popup_.release();
+    sounds_.stopAll();
+}
+
+void Game::completeChapter() {
+    if (state_ != GameState::Playing || !player_.isAlive()) return;
+    state_ = GameState::ChapterClear;
+    stateTimer_ = 0.f;
+    popup_.release();
+    sounds_.play(chapter_ == 1 ? SoundCue::FakeWin : SoundCue::Chapter);
+}
+
+void Game::continueChapter() {
+    if (state_ != GameState::ChapterClear) return;
+    if (chapter_ < 3) {
+        loadChapter(chapter_ + 1);
+        state_ = GameState::Playing;
+        sounds_.play(SoundCue::Chapter);
+    } else {
+        // these are the three layouts in this build, the boss calls win later
+        finalVictory_ = false;
+        state_ = GameState::Victory;
+        sounds_.play(SoundCue::Victory);
+    }
+}
+
+void Game::win() {
+    if (state_ != GameState::Playing) return;
+    finalVictory_ = true;
+    state_ = GameState::Victory;
+    popup_.release();
+    sounds_.play(SoundCue::Victory);
+}
+
+void Game::handleKey(sf::Keyboard::Key key) {
+    if (key == sf::Keyboard::S) {
+        sounds_.toggleMute();
+        return;
+    }
+    if (key == sf::Keyboard::Q) { quit_ = true; return; }
+    if (key == sf::Keyboard::M) { returnToMenu(); return; }
+    if (key == sf::Keyboard::R) { retry(); return; }
+    if (key == sf::Keyboard::Escape) {
+        if (state_ == GameState::Paused) resume();
+        else if (state_ == GameState::Credits) state_ = GameState::Victory;
+        else pause();
+        return;
+    }
+    if (key != sf::Keyboard::Enter) return;
+    if (state_ == GameState::Menu) start();
+    else if (state_ == GameState::Paused) resume();
+    else if (state_ == GameState::Dead) retry();
+    else if (state_ == GameState::ChapterClear) continueChapter();
+    else if (state_ == GameState::Victory) state_ = GameState::Credits;
+    else if (state_ == GameState::Credits) returnToMenu();
+}
+
+void Game::mouseMoved(const sf::Vector2f& mouse) {
+    ui_.setMouse(mouse);
+    if (state_ == GameState::Playing && interfacePopupEnabled_) popup_.move(mouse);
+}
+
+void Game::mousePressed(const sf::Vector2f& mouse) {
+    if (state_ == GameState::Playing && interfacePopupEnabled_) {
+        if (popup_.press(mouse)) sounds_.play(SoundCue::Click);
+        return;
+    }
+    if (state_ == GameState::Playing) return;
+    if (sf::FloatRect(290.f, 330.f, 380.f, 48.f).contains(mouse)) {
+        handleKey(sf::Keyboard::Enter);
+    } else if (sf::FloatRect(290.f, 390.f, 380.f, 48.f).contains(mouse)) {
+        if (state_ == GameState::Menu) quit_ = true;
+        else if (state_ == GameState::Credits) state_ = GameState::Victory;
+        else returnToMenu();
+    }
+}
+
+void Game::mouseReleased() { popup_.release(); }
+void Game::lostFocus() { mouseReleased(); pause(); }
+bool Game::wantsQuit() const { return quit_; }
+bool Game::isReady() const { return ui_.isReady(); }
+
+void Game::setGhostReplayEnabled(bool on) { ghostReplayEnabled_ = on; }
+void Game::setInterfacePopupEnabled(bool on) {
+    interfacePopupEnabled_ = on;
+    popup_.reset();
+}
+bool Game::hasGhost() const { return ghostReplayEnabled_ && attempts_.hasGhost(); }
+sf::FloatRect Game::getGhostBounds() const {
+    const Position& p = attempts_.getGhostPosition();
+    return sf::FloatRect(p.getX(), p.getY(), 28.f, 36.f);
+}
+bool Game::hasPopupPlatform() const { return interfacePopupEnabled_ && popup_.isPlatform(); }
+sf::FloatRect Game::getPopupPlatformBounds() const { return popup_.getPlatformBounds(); }
+
+void Game::checkPatchMessage() {
+    const int count = patches_.getAnnouncementCount();
+    if (count == shownPatch_) return;
+    shownPatch_ = count;
+    patchMessage_ = patches_.getLastAnnouncement();
+    patchVersion_ = patches_.getLastVersion();
+    patchPopupTimer_ = 5.f;
+    sounds_.play(SoundCue::Patch);
 }
 
 void Game::update(float dt, bool left, bool right, bool jump) {
-    if (state_ != GameState::Playing || dt <= 0.f) return;
+    if (dt <= 0.f) return;
+    if (dt > 0.05f) dt = 0.05f;
+    if (state_ == GameState::ChapterClear) { stateTimer_ += dt; return; }
+    if (state_ != GameState::Playing) return;
 
+    runTime_ += dt;
+    if (messageTimer_ > 0.f) messageTimer_ -= dt;
+    if (patchPopupTimer_ > 0.f) patchPopupTimer_ -= dt;
+    attempts_.updateReplay(dt);
+    const float oldYVelocity = player_.getVelocity().getY();
     player_.handleInput(left, right, jump);
     level_.update(dt, player_, dev_, patches_);
+    attempts_.record(dt, player_.getPosition());
+    checkPatchMessage();
     if (!player_.isAlive()) {
+        attempts_.finishAttempt();
         state_ = GameState::Dead;
-        cout << dev_.getLastTaunt() << " | deaths: " << player_.getDeathCount()
-             << " | R retries\n";
-        if (dev_.getLastPatchReason().size()) {
-            cout << dev_.getLastPatchReason() << "\n";
-        }
+        showMessage(dev_.getLastTaunt());
+        sounds_.play(SoundCue::Death);
         return;
     }
+    if (oldYVelocity >= 0.f && player_.getVelocity().getY() < 0.f) sounds_.play(SoundCue::Jump);
 
-    // temp until hussain puts a real exit in, walking off the right loads next layout
-    if (player_.getPosition().getX() > 910.f) {
-        if (chapter_ < 3) {
-            loadChapter(chapter_ + 1);
-            cout << "ok you made it, next is " << level_.getName() << "\n";
-            cout << dev_.getLastTaunt() << "\n";
-        } else {
-            player_.setPosition(880.f, player_.getPosition().getY());
-            cout << "thats all of arsalan layouts for now, hussain still owns the real exit\n";
-        }
+    // temp until hussain puts a real exit in, his exit can call completeChapter
+    if (player_.getPosition().getX() > 910.f) completeChapter();
+}
+
+void Game::drawHud(sf::RenderTarget& target) const {
+    ui_.box(target, 0.f, 0.f, 960.f, 60.f, sf::Color(19, 16, 29, 240));
+    ui_.text(target, level_.getName(), 24.f, 12.f, 20, sf::Color(210, 185, 255));
+    ui_.text(target, "deaths: " + to_string(player_.getDeathCount()), 630.f, 15.f, 18);
+    ui_.text(target, sounds_.isMuted() ? "s: sound off" : "s: sound on", 790.f, 18.f, 13);
+    string rules = player_.areControlsFlipped() ? "controls: reversed" : "controls: normal";
+    rules += "   gravity: " + to_string(static_cast<int>(level_.getBaseGravity()));
+    if (patches_.getActiveCount() > 0) {
+        const int seconds = static_cast<int>(patches_.getRemainingTime() + 0.999f);
+        rules += "   patches: " + to_string(patches_.getActiveCount()) + " / " + to_string(seconds) + "s";
     }
+    ui_.text(target, rules, 24.f, 70.f, 14, sf::Color(190, 185, 205));
+    if (messageTimer_ > 0.f || state_ == GameState::Dead) {
+        ui_.box(target, 24.f, 103.f, 912.f, 64.f, sf::Color(38, 29, 53, 235));
+        ui_.monitor(target, 36.f, 114.f, dev_.getMood() >= 4);
+        ui_.text(target, "dev: " + message_, 100.f, 122.f, 15);
+    }
+    if (patchPopupTimer_ > 0.f || (state_ == GameState::Dead && patches_.getActiveCount() > 0)) {
+        const float slide = patchPopupTimer_ > 4.8f ? (patchPopupTimer_ - 4.8f) * 100.f : 0.f;
+        ui_.box(target, 24.f, 181.f + slide, 912.f, 68.f, sf::Color(84, 43, 111, 245));
+        ui_.text(target, "update installed / " + patchVersion_, 38.f, 189.f + slide, 16,
+                 sf::Color(240, 190, 255));
+        ui_.text(target, patchMessage_, 38.f, 218.f + slide, 14);
+    }
+    ui_.text(target, "arrows move   space jump   esc pause   r retry   m menu", 24.f, 520.f, 13,
+             sf::Color(175, 165, 195));
+}
+
+void Game::drawScreen(sf::RenderTarget& target) const {
+    ui_.shade(target);
+    ui_.monitor(target, 456.f, 52.f, state_ == GameState::Dead);
+    string title;
+    string line;
+    string detail;
+    string first;
+    string second = "m / back to menu";
+    if (state_ == GameState::Menu) {
+        title = "ragebait maxxing";
+        line = "a game with your best interests at heart";
+        detail = "arrows move / space jumps / esc pauses";
+        first = "enter / start suffering";
+        second = "q / quit while you can";
+    } else if (state_ == GameState::Paused) {
+        title = "taking a break?";
+        line = "fine. the traps can wait.";
+        detail = "game and patch timers are paused";
+        first = "enter / keep going";
+    } else if (state_ == GameState::Dead) {
+        title = "you died. again.";
+        line = dev_.getLastTaunt();
+        detail = "deaths: " + to_string(player_.getDeathCount());
+        if (patches_.getActiveCount() > 0) detail += " / update installed: " + patches_.getLastVersion();
+        first = "r or enter / try again";
+    } else if (state_ == GameState::ChapterClear) {
+        title = chapter_ == 1 && stateTimer_ < 1.5f ? "congratulations!" : "player review";
+        line = chapter_ == 1 ? "you finished the tutorial. thats it." : "chapter cleared. suspicious.";
+        const int deaths = player_.getDeathCount() - chapterStartDeaths_;
+        detail = "chapter deaths: " + to_string(deaths) + " / rating: ";
+        detail += deaths == 0 ? "probably luck" : (deaths < 5 ? "concerning" : "very committed");
+        first = "enter / continue suffering";
+    } else if (state_ == GameState::Victory) {
+        title = finalVictory_ ? "the final hotfix" : "current build cleared";
+        line = finalVictory_ ? "you reached the switch. dev has disconnected." : "all 3 chapters done. dev is making more.";
+        detail = "total deaths: " + to_string(player_.getDeathCount()) + " / time: "
+                 + to_string(static_cast<int>(runTime_)) + "s";
+        first = "enter / credits";
+    } else if (state_ == GameState::Credits) {
+        title = "blame these people";
+        line = "hussain / movement and physical world";
+        detail = "arsalan / traps patches and level design";
+        first = "enter / back to menu";
+        second = "esc / back to results";
+    }
+    const float titleX = (960.f - title.size() * 21.7f) * 0.5f;
+    ui_.text(target, title, titleX, 119.f, 36, sf::Color(220, 190, 255));
+    const float lineX = (960.f - line.size() * 10.85f) * 0.5f;
+    ui_.text(target, line, lineX, 185.f, 18);
+    const float detailX = (960.f - detail.size() * 9.64f) * 0.5f;
+    ui_.text(target, detail, detailX, 225.f, 16, sf::Color(185, 175, 205));
+    if (state_ == GameState::Credits) {
+        ui_.text(target, "abdullah / screens sound and integration", 292.f, 261.f, 16);
+        ui_.text(target, "font: dejavu sans mono / license in assets/fonts", 259.f, 294.f, 14);
+    } else if (state_ == GameState::Dead && patches_.getActiveCount() > 0) {
+        ui_.text(target, patchMessage_, 80.f, 273.f, 14, sf::Color(240, 190, 255));
+    }
+    ui_.button(target, first, 290.f, 330.f, 380.f, 48.f);
+    ui_.button(target, second, 290.f, 390.f, 380.f, 48.f);
+    ui_.text(target, sounds_.isMuted() ? "s / turn sound on" : "s / mute sound", 400.f, 478.f, 14,
+             sf::Color(175, 165, 195));
 }
 
 void Game::draw(sf::RenderTarget& target) const {
     level_.draw(target);
     if (state_ != GameState::Menu) player_.draw(target);
+    if (hasGhost()) {
+        const sf::FloatRect ghost = getGhostBounds();
+        ui_.box(target, ghost.left, ghost.top, ghost.width, ghost.height, sf::Color(130, 210, 255, 95));
+    }
+    if (interfacePopupEnabled_ && state_ != GameState::Menu) popup_.draw(target, ui_);
+    if (state_ != GameState::Menu) drawHud(target);
+    if (state_ != GameState::Playing) drawScreen(target);
 }
 
 GameState Game::getState() const { return state_; }

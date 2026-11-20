@@ -39,3 +39,60 @@ level uses the same early return checks as traps then moves player and checks hi
 player draw uses the same alive check style too
 respawn still resets the ground bool so jumping doesnt use the last attempt state
 kept the original constructors arrays constants and getters no extra classes or libraries
+
+20/11/2026
+
+hey team abdullah again, screens sound and the rest of the game flow are in
+
+what changed
+real menu pause death chapter review results and credits screens now
+buttons work with mouse too, old keyboard controls still work
+dev messages show on screen with a little monitor face
+hud shows chapter deaths controls gravity and the patch countdown
+patch popup reads the actual version and notes from patchmanager
+chapter 1 says congratulations then tells you it was just the tutorial
+chapter 3 ends at current build cleared since those are the layouts we have
+new game resets deaths properly now, retry still keeps deaths and patches
+distinct little sounds for jump death updates buttons and clearing a chapter
+s toggles sound, q quits, enter also retries from the death screen
+resizing keeps the game proportions and mouse buttons lined up
+
+folder extra
+include/ui and src/ui have GameUI and PopupWindow
+include/audio and src/audio have SoundSystem
+AttemptRecorder is in include/game and src/game
+font and its license are in assets/fonts, cmake copies assets beside the exe
+font is dejavu sans mono from https://github.com/dejavu-fonts/dejavu-fonts/releases/tag/version_2_37
+sounds are generated through sfml so no extra audio downloads
+
+hussain hooks for later
+game.completeChapter() is the exit hook, right edge still calls it for now
+AttemptRecorder keeps the last attempt in fixed arrays and replays by elapsed time
+game.setGhostReplayEnabled(true) turns on the ghost after an attempt
+game.hasGhost() and game.getGhostBounds() are for the pressure plate checks
+pause and death stop recording and replay, retry rewinds it, new chapter clears it
+recording caps at 7200 frames then holds the last recorded position
+this is just recording and replay state, switches doors and ghost collisions stay with your world code
+
+arsalan hooks for later
+game.setInterfacePopupEnabled(true) turns on the chapter 5 window
+drag its title bar and drop it, close button dodges three times then works
+game.hasPopupPlatform() and game.getPopupPlatformBounds() give hussain the dropped top edge
+game.win() opens the final victory screen when the boss is actually beaten
+new chapter resets both interactions, enable them after loading the layout that needs them
+didnt add chapters 4-6 or change the existing traps and layouts
+patchmanager only got notification fields and getters here, shared patch timer still needs your pass
+
+same style as before
+normal classes enums bools arrays and if checks, no vector no memory header no extra libraries
+include and src split still the same
+
+checked with a real sfml 2.6.2 build on windows
+game flow checks cover menu buttons pause focus loss death retry patch messages chapter reviews results and credits
+also checked timed ghost replay array limit popup dragging and closing and rendered the screens
+test build if you want it: cmake -S . -B build -DRAGEBAIT_BUILD_TESTS=ON
+then cmake --build build and ctest --test-dir build --output-on-failure
+tests need the same sfml dlls as the game on windows
+
+when you run it try start jump die twice retry pause and resume then m and enter
+deaths should be zero on the fresh run and patches should still wait while paused or dead

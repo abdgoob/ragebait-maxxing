@@ -4,6 +4,10 @@
 #include "patches/PatchManager.h"
 #include "stubs/Level.h"
 #include "stubs/Player.h"
+#include "audio/SoundSystem.h"
+#include "game/AttemptRecorder.h"
+#include "ui/GameUI.h"
+#include "ui/PopupWindow.h"
 
 using namespace std;
 
@@ -11,14 +15,18 @@ enum class GameState {
     Menu,
     Playing,
     Paused,
-    Dead
+    Dead,
+    ChapterClear,
+    Victory,
+    Credits
 };
 
-// basic game flow for now, actual menu screens come later
+// abdullah flow and screens, world stuff stays in level and player
 
 class Game {
 public:
     Game();
+    explicit Game(const string& assetFolder);
     ~Game();
 
     void start();
@@ -26,6 +34,25 @@ public:
     void resume();
     void retry();
     void returnToMenu();
+    void continueChapter();
+    void completeChapter();
+    void win();
+
+    void handleKey(sf::Keyboard::Key key);
+    void mouseMoved(const sf::Vector2f& mouse);
+    void mousePressed(const sf::Vector2f& mouse);
+    void mouseReleased();
+    void lostFocus();
+    bool wantsQuit() const;
+    bool isReady() const;
+
+    // hooks for hussain's ghost switches and chapter 5 platforms
+    void setGhostReplayEnabled(bool on);
+    void setInterfacePopupEnabled(bool on);
+    bool hasGhost() const;
+    sf::FloatRect getGhostBounds() const;
+    bool hasPopupPlatform() const;
+    sf::FloatRect getPopupPlatformBounds() const;
 
     void update(float dt, bool left, bool right, bool jump);
     void draw(sf::RenderTarget& target) const;
@@ -38,8 +65,29 @@ private:
     PatchManager patches_;
     GameState state_;
     int chapter_;
+    GameUI ui_;
+    SoundSystem sounds_;
+    AttemptRecorder attempts_;
+    PopupWindow popup_;
+    bool quit_;
+    bool finalVictory_;
+    bool ghostReplayEnabled_;
+    bool interfacePopupEnabled_;
+    int chapterStartDeaths_;
+    int shownPatch_;
+    float messageTimer_;
+    float patchPopupTimer_;
+    float stateTimer_;
+    float runTime_;
+    string message_;
+    string patchMessage_;
+    string patchVersion_;
 
     void loadChapter(int n);
+    void showMessage(const string& words);
+    void checkPatchMessage();
+    void drawHud(sf::RenderTarget& target) const;
+    void drawScreen(sf::RenderTarget& target) const;
 
     Game(const Game& other);
     Game& operator=(const Game& other);

@@ -3,12 +3,17 @@
 
 using namespace std;
 
-int main() {
+int main(int argc, char* argv[]) {
     sf::RenderWindow window(sf::VideoMode(960, 540), "ragebait maxxing");
     window.setFramerateLimit(60);
     // holding R should not keep respawning the player
     window.setKeyRepeatEnabled(false);
-    Game game;
+    // assets are copied beside the executable, also works when launched elsewhere
+    string executable = argc > 0 ? argv[0] : "";
+    const string::size_type slash = executable.find_last_of("/\\");
+    const string assetFolder = slash == string::npos ? "assets/" : executable.substr(0, slash + 1) + "assets/";
+    Game game(assetFolder);
+    if (!game.isReady()) return 1;
     sf::Clock clock;
     while (window.isOpen()) {
         float dt = clock.restart().asSeconds();
@@ -18,19 +23,42 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
             if (event.type == sf::Event::LostFocus) {
-                game.pause();
+                game.lostFocus();
+                changedState = true;
+            }
+            if (event.type == sf::Event::Resized) {
+                // keep the same game coords and button hitboxes when resized
+                if (event.size.width > 0 && event.size.height > 0) {
+                    sf::View view(sf::FloatRect(0.f, 0.f, 960.f, 540.f));
+                    const float ratio = static_cast<float>(event.size.width) / event.size.height;
+                    if (ratio > 960.f / 540.f) {
+                        const float width = (960.f / 540.f) / ratio;
+                        view.setViewport(sf::FloatRect((1.f - width) * 0.5f, 0.f, width, 1.f));
+                    } else {
+                        const float height = ratio / (960.f / 540.f);
+                        view.setViewport(sf::FloatRect(0.f, (1.f - height) * 0.5f, 1.f, height));
+                    }
+                    window.setView(view);
+                }
+            }
+            if (event.type == sf::Event::MouseMoved) {
+                game.mouseMoved(window.mapPixelToCoords(sf::Vector2i(event.mouseMove.x, event.mouseMove.y)));
+            }
+            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
+                game.mouseReleased();
+            }
+            if (event.type == sf::Event::MouseButtonPressed && window.hasFocus()
+                && event.mouseButton.button == sf::Mouse::Left) {
+                game.mousePressed(window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y)));
                 changedState = true;
             }
             if (event.type != sf::Event::KeyPressed || !window.hasFocus()) continue;
-            if (event.key.code == sf::Keyboard::Enter) game.start();
-            else if (event.key.code == sf::Keyboard::Escape) {
-                if (game.getState() == GameState::Paused) game.resume();
-                else game.pause();
-            } else if (event.key.code == sf::Keyboard::R) game.retry();
-            else if (event.key.code == sf::Keyboard::M) game.returnToMenu();
-            else continue;
+            if (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right
+                || event.key.code == sf::Keyboard::Space) continue;
+            game.handleKey(event.key.code);
             changedState = true;
         }
+        if (game.wantsQuit()) window.close();
         if (!window.isOpen()) break;
         if (!changedState && window.hasFocus()) {
             bool left = sf::Keyboard::isKeyPressed(sf::Keyboard::Left);

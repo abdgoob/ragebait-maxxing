@@ -4,7 +4,7 @@
 
 using namespace std;
 
-PatchManager::PatchManager() : activeCount_(0), pending_(0), patchTimer_(0.f) {
+PatchManager::PatchManager() : activeCount_(0), pending_(0), patchTimer_(0.f), announcementCount_(0) {
     for (int i = 0; i < MAX_ACTIVE; ++i) {
         active_[i] = 0;
     }
@@ -39,6 +39,9 @@ void PatchManager::applyQueued(Player& player, Level& level) {
     }
     active_[activeCount_] = pending_;
     ++activeCount_;
+    lastAnnouncement_ = pending_->getAnnouncement();
+    lastVersion_ = pending_->getVersion();
+    ++announcementCount_;
     pending_ = 0;
 }
 
@@ -67,6 +70,13 @@ string PatchManager::peekNextAnnouncement() const {
     return pending_->getAnnouncement();
 }
 
+// presentation reads these, patch timing still belongs to the manager
+string PatchManager::getLastAnnouncement() const { return lastAnnouncement_; }
+string PatchManager::getLastVersion() const { return lastVersion_; }
+int PatchManager::getAnnouncementCount() const { return announcementCount_; }
+int PatchManager::getActiveCount() const { return activeCount_; }
+float PatchManager::getRemainingTime() const { return patchTimer_ > 0.f ? patchTimer_ : 0.f; }
+
 void PatchManager::clearAll(Player& player, Level& level) {
     for (int i = 0; i < activeCount_; ++i) {
         if (active_[i]) {
@@ -82,4 +92,6 @@ void PatchManager::clearAll(Player& player, Level& level) {
         pending_ = 0;
     }
     patchTimer_ = 0.f;
+    lastAnnouncement_ = "";
+    lastVersion_ = "";
 }

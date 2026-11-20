@@ -21,6 +21,11 @@ public:
 
     bool hasPending() const;
     string peekNextAnnouncement() const;
+    string getLastAnnouncement() const;
+    string getLastVersion() const;
+    int getAnnouncementCount() const;
+    int getActiveCount() const;
+    float getRemainingTime() const;
 
     void clearAll(Player& player, Level& level);
 
@@ -29,6 +34,9 @@ private:
     int activeCount_;
     PatchEffect* pending_;
     float patchTimer_;
+    string lastAnnouncement_;
+    string lastVersion_;
+    int announcementCount_;
 
     void freeActive();
     PatchManager(const PatchManager& other);
