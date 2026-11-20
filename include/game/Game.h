@@ -37,6 +37,9 @@ private:
     DeveloperDirector dev_;
     PatchManager patches_;
     GameState state_;
+    int chapter_;
+
+    void loadChapter(int n);
 
     Game(const Game& other);
     Game& operator=(const Game& other);

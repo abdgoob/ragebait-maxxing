@@ -13,12 +13,14 @@ public:
     void update(float dt) override;
     void draw(sf::RenderTarget& target) const override;
     void reset() override;
+    bool holdsPlayer() const override;
 
     bool isFallen() const;
 
 private:
     float w_;
     float h_;
+    float startY_;
     bool fallen_;
     float fallTimer_;
 };

@@ -1,3 +1,5 @@
+17/11/2026
+
 hey team its arsalan first drop is on github now merged with abdullah readme and zip
 
 what i added
@@ -40,3 +42,27 @@ stubs are temporary
 update btw no vector no memory header just pointer arrays and new delete like we did in class. using namespace std everywhere. level owns traps and deletes them in destructor patch manager same vibe
 
 lmk if trap factory tags or patch timing feels wrong we can tweak before demo
+
+20/11/2026
+
+hey team arsalan again, layouts and trap polish for chapters 1-3
+
+what changed
+levelbuilder fills traps for 01 everything is fine, 02 skill issue, 03 patch hell
+spikes actually sit on the floor now (y 456) and draw as little triangles
+fake floors look like the ground and drop you into a pit instead of instantly killing you
+control pad is a purple strip on the floor
+gravity patch only changes level gravity now so it doesnt stack with player scale (hussain you were right)
+dev has more taunts, chapter 3 fires patches every death
+
+walk to the right edge to hop to the next layout for now until hussain puts a real exit
+enter still starts from chapter 1
+
+folder extra
+include/levels and src/levels LevelBuilder, cmake lists it
+
+pit is a hole in the one ground rect, hussain you can replace that when you do platforms just leave addTrap clearTraps setPit setName
+
+same build as before, from repo/build:
+cmake --build .
+./ragebait_maxxing

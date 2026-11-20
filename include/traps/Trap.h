@@ -25,6 +25,7 @@ public:
 
     virtual bool hurtsPlayer(const Player& player) const = 0;
     virtual void onPlayerTouch(Player& player);
+    virtual bool holdsPlayer() const;
     virtual void reset();
 
     void update(float dt) override;

@@ -6,10 +6,13 @@
 using namespace std;
 
 Level::Level() : Level("test chunk") {}
-Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.f) {
-    ground_.setSize(sf::Vector2f(900.f, 40.f));
+Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.f), pitLeft_(0.f), pitRight_(0.f) {
+    ground_.setSize(sf::Vector2f(960.f, 40.f));
     ground_.setPosition(0.f, 480.f);
     ground_.setFillColor(sf::Color(60, 60, 70));
+    pit_.setFillColor(sf::Color(12, 10, 16));
+    pit_.setSize(sf::Vector2f(0.f, 40.f));
+    pit_.setPosition(0.f, 480.f);
     for (int i = 0; i < MAX_TRAPS; ++i) {
         traps_[i] = 0;
     }
@@ -27,6 +30,27 @@ void Level::addTrap(Trap* trap) {
     if (!trap || trapCount_ >= MAX_TRAPS) return;
     traps_[trapCount_] = trap;
     ++trapCount_;
+}
+
+void Level::clearTraps() {
+    for (int i = 0; i < trapCount_; ++i) {
+        delete traps_[i];
+        traps_[i] = 0;
+    }
+    trapCount_ = 0;
+}
+
+void Level::setName(const string& name) { name_ = name; }
+
+void Level::setPit(float left, float right) {
+    pitLeft_ = left;
+    pitRight_ = right;
+    if (right <= left) {
+        pit_.setSize(sf::Vector2f(0.f, 40.f));
+        return;
+    }
+    pit_.setSize(sf::Vector2f(right - left, 56.f));
+    pit_.setPosition(left, 480.f);
 }
 
 void Level::setBaseGravity(float g) { baseGravity_ = g; }
@@ -58,6 +82,7 @@ void Level::update(float dt, Player& player, DeveloperDirector& dev, PatchManage
 
 void Level::draw(sf::RenderTarget& target) const {
     target.draw(ground_);
+    if (pitRight_ > pitLeft_) target.draw(pit_);
     for (int i = 0; i < trapCount_; ++i) {
         if (traps_[i]) traps_[i]->draw(target);
     }
@@ -90,6 +115,23 @@ void Level::keepOnGround(Player& player) {
 
     const sf::FloatRect pb = player.getBounds();
     const sf::FloatRect gb = ground_.getGlobalBounds();
+
+    // stand on fake floors until they dump you
+    for (int i = 0; i < trapCount_; ++i) {
+        if (!traps_[i] || !traps_[i]->holdsPlayer()) continue;
+        const sf::FloatRect tb = traps_[i]->getBounds();
+        const bool over =
+            pb.left + pb.width > tb.left && pb.left < tb.left + tb.width;
+        if (!over) continue;
+        if (pb.top + pb.height < tb.top - 4.f) continue;
+        if (pb.top + pb.height > tb.top + 16.f) continue;
+        player.landOn(tb.top);
+        return;
+    }
+
+    // pit in the floor, fake platforms are supposed to cover this
+    const float feetX = pb.left + pb.width * 0.5f;
+    if (pitRight_ > pitLeft_ && feetX > pitLeft_ && feetX < pitRight_) return;
 
     // off the end of the ground means you fall and die
     if (pb.left + pb.width <= gb.left || pb.left >= gb.left + gb.width) return;

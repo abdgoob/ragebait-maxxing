@@ -11,9 +11,11 @@ class PatchManager;
 
 class DeveloperDirector {
 public:
-    static const int TAUNT_COUNT = 5;
+    static const int TAUNT_COUNT = 8;
 
     DeveloperDirector();
+
+    void setPatchHappy(bool on);
 
     void onPlayerDeath(Player& player, const Trap* trap);
     void onLevelStart(const Level& level);
@@ -31,6 +33,7 @@ private:
 
     int mood_;
     int deathsThisLevel_;
+    bool patchHappy_;
     string lastTaunt_;
     string lastPatchReason_;
     string genericTaunts_[TAUNT_COUNT];

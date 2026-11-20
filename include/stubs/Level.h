@@ -21,6 +21,9 @@ public:
     ~Level();
 
     void addTrap(Trap* trap);
+    void clearTraps();
+    void setName(const string& name);
+    void setPit(float left, float right);
     void setBaseGravity(float g);
     float getBaseGravity() const;
 
@@ -38,6 +41,9 @@ private:
     int trapCount_;
     float baseGravity_;
     sf::RectangleShape ground_;
+    sf::RectangleShape pit_;
+    float pitLeft_;
+    float pitRight_;
 
     void keepOnGround(Player& player);
 

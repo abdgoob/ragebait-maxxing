@@ -15,8 +15,8 @@ public:
 
 private:
     float startX_;
+    float startY_;
     float moveDistance_;
     float speed_;
     float t_;
-    bool goingRight_;
 };

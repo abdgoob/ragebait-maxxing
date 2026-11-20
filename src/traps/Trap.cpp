@@ -20,6 +20,8 @@ void Trap::onPlayerTouch(Player& player) {
     (void)player;
 }
 
+bool Trap::holdsPlayer() const { return false; }
+
 void Trap::reset() {}
 
 void Trap::update(float dt) {

@@ -7,53 +7,57 @@ FakePlatform::FakePlatform(const Position& pos, float width, float height)
     : Trap(pos, TrapKind::FakePlatform),
       w_(width),
       h_(height),
+      startY_(pos.getY()),
       fallen_(false),
       fallTimer_(0.f) {
     shape_.setSize(sf::Vector2f(w_, h_));
-    shape_.setFillColor(sf::Color(140, 200, 120));
+    // same-ish as the real ground so it looks legit
+    shape_.setFillColor(sf::Color(72, 72, 82));
+    shape_.setOutlineColor(sf::Color(95, 95, 108));
+    shape_.setOutlineThickness(1.f);
     shape_.setPosition(pos_.getX(), pos_.getY());
 }
 
 bool FakePlatform::hurtsPlayer(const Player& player) const {
     (void)player;
-    return fallen_;
+    // collapsing is the joke, the pit / spikes below do the killing
+    return false;
 }
 
 void FakePlatform::onPlayerTouch(Player& player) {
-    (void)player;
     if (fallen_) return;
 
     const sf::FloatRect pb = player.getBounds();
     const sf::FloatRect plat = shape_.getGlobalBounds();
+    const bool fromAbove = pb.top + pb.height <= plat.top + 12.f;
 
-    const bool standingOn =
-        pb.top + pb.height <= plat.top + 8.f && pb.intersects(plat);
-
-    if (standingOn) {
+    if (fromAbove && pb.intersects(plat)) {
+        player.landOn(plat.top);
         fallen_ = true;
-        active_ = false;
-        fallTimer_ = 0.4f;
+        fallTimer_ = 0.35f;
     }
 }
 
 void FakePlatform::update(float dt) {
     if (fallen_ && fallTimer_ > 0.f) {
         fallTimer_ -= dt;
-        pos_.setY(pos_.getY() + 400.f * dt);
+        pos_.setY(pos_.getY() + 420.f * dt);
         shape_.setPosition(pos_.getX(), pos_.getY());
     }
-    Trap::update(dt);
 }
 
 void FakePlatform::draw(sf::RenderTarget& target) const {
-    if (!fallen_) target.draw(shape_);
+    if (!fallen_ || fallTimer_ > 0.f) target.draw(shape_);
 }
 
 void FakePlatform::reset() {
     fallen_ = false;
     fallTimer_ = 0.f;
     active_ = true;
+    pos_.setY(startY_);
     shape_.setPosition(pos_.getX(), pos_.getY());
 }
 
 bool FakePlatform::isFallen() const { return fallen_; }
+
+bool FakePlatform::holdsPlayer() const { return !fallen_; }

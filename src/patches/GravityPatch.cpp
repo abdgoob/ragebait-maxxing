@@ -8,17 +8,16 @@ GravityPatch::GravityPatch(float newGravity)
     : newGravity_(newGravity), oldGravity_(900.f), playerGravityBackup_(1.f) {}
 
 void GravityPatch::apply(Player& player, Level& level) {
+    (void)player;
     oldGravity_ = level.getBaseGravity();
-    playerGravityBackup_ = player.getGravityScale();
-
+    // only change level gravity, hussain already applies that * player scale
     level.setBaseGravity(newGravity_);
-    player.setGravityScale(newGravity_ / 900.f);
     markActive(true);
 }
 
 void GravityPatch::revert(Player& player, Level& level) {
+    (void)player;
     level.setBaseGravity(oldGravity_);
-    player.setGravityScale(playerGravityBackup_);
     markActive(false);
 }
 

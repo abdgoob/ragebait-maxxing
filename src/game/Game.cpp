@@ -1,29 +1,37 @@
 #include "game/Game.h"
-#include "traps/TrapFactory.h"
+#include "levels/LevelBuilder.h"
 #include <iostream>
 
 using namespace std;
 
 Game::Game()
-    : player_(Position(80.f, 380.f)), level_("arsalan test pit"), state_(GameState::Menu) {
-    level_.addTrap(TrapFactory::create(TrapKind::Spike, Position(340.f, 420.f)));
-    level_.addTrap(TrapFactory::create(TrapKind::FakePlatform, Position(220.f, 400.f)));
-    level_.addTrap(TrapFactory::create(TrapKind::ControlSwap, Position(520.f, 400.f)));
-    cout << "menu: Enter starts, M returns here\n";
+    : player_(Position(80.f, 444.f)), level_("01 everything is fine"), state_(GameState::Menu), chapter_(1) {
+    loadChapter(1);
+    cout << "menu: Enter starts, M returns here, walk right to swap chapters for now\n";
 }
 
 Game::~Game() { patches_.clearAll(player_, level_); }
 
+void Game::loadChapter(int n) {
+    if (n < 1) n = 1;
+    if (n > 3) n = 3;
+    chapter_ = n;
+    patches_.clearAll(player_, level_);
+    level_.setBaseGravity(900.f);
+    LevelBuilder::fillChapter(level_, chapter_);
+    player_.setGravityScale(1.f);
+    player_.setControlsFlipped(false);
+    player_.setSpawnPoint(Position(80.f, 444.f));
+    player_.respawn();
+    dev_ = DeveloperDirector();
+    dev_.setPatchHappy(chapter_ == 3);
+    dev_.onLevelStart(level_);
+}
+
 void Game::start() {
     if (state_ != GameState::Menu) return;
 
-    // new game starts clean, retry below keeps the patches
-    patches_.clearAll(player_, level_);
-    player_ = Player(Position(80.f, 380.f));
-    level_.setBaseGravity(900.f);
-    level_.resetTraps();
-    dev_ = DeveloperDirector();
-    dev_.onLevelStart(level_);
+    loadChapter(1);
     state_ = GameState::Playing;
     cout << dev_.getLastTaunt() << "\n";
     cout << "arrows move, space jumps, Escape pauses, R retries\n";
@@ -66,6 +74,22 @@ void Game::update(float dt, bool left, bool right, bool jump) {
         state_ = GameState::Dead;
         cout << dev_.getLastTaunt() << " | deaths: " << player_.getDeathCount()
              << " | R retries\n";
+        if (dev_.getLastPatchReason().size()) {
+            cout << dev_.getLastPatchReason() << "\n";
+        }
+        return;
+    }
+
+    // temp until hussain puts a real exit in, walking off the right loads next layout
+    if (player_.getPosition().getX() > 910.f) {
+        if (chapter_ < 3) {
+            loadChapter(chapter_ + 1);
+            cout << "ok you made it, next is " << level_.getName() << "\n";
+            cout << dev_.getLastTaunt() << "\n";
+        } else {
+            player_.setPosition(880.f, player_.getPosition().getY());
+            cout << "thats all of arsalan layouts for now, hussain still owns the real exit\n";
+        }
     }
 }
 

@@ -23,6 +23,7 @@ set(SOURCES
     src/patches/ControlPatch.cpp
     src/patches/PatchManager.cpp
     src/developer/DeveloperDirector.cpp
+    src/levels/LevelBuilder.cpp
 )
 
 add_executable(ragebait_maxxing ${SOURCES})
