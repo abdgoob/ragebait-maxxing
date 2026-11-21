@@ -11,6 +11,7 @@ set(GAME_SOURCES
     src/game/AttemptRecorder.cpp
     src/game/ProgressSave.cpp
     src/game/GhostReplay.cpp
+    src/game/RunSummary.cpp
     src/ui/GameUI.cpp
     src/ui/PopupWindow.cpp
     src/audio/SoundSystem.cpp

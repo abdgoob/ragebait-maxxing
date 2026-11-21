@@ -125,6 +125,7 @@ void checkProgressSave() {
 }
 
 void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
+    const float timeBefore = game.getRunSummary().getPlayTime();
     target.clear();
     game.draw(target);
     target.display();
@@ -136,6 +137,7 @@ void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
     const sf::Image after = target.getTexture().copyToImage();
     check(memcmp(before.getPixelsPtr(), after.getPixelsPtr(), 960 * 540 * 4) == 0,
           "paused and dead screens freeze world, counters and patch countdown");
+    check(game.getRunSummary().getPlayTime() == timeBefore, "paused and dead screens freeze active play time");
 }
 
 int main() {
@@ -151,6 +153,22 @@ int main() {
     check(game.isReady(), "bundled font loads");
     check(game.getState() == GameState::Menu, "starts at menu");
     snapshot(game, target, "menu");
+    game.handleKey(sf::Keyboard::L);
+    check(game.getMenuPage() == MenuPage::LevelSelect, "keyboard opens level select");
+    snapshot(game, target, "level_select");
+    game.mousePressed(sf::Vector2f(550.f, 240.f));
+    check(game.getState() == GameState::Menu, "locked chapter cannot start");
+    game.handleKey(sf::Keyboard::Escape);
+    game.handleKey(sf::Keyboard::O);
+    check(game.getMenuPage() == MenuPage::Settings, "keyboard opens reliable settings");
+    snapshot(game, target, "settings");
+    game.handleKey(sf::Keyboard::S);
+    check(game.isSoundMuted(), "settings toggles sound");
+    Game savedSettings("assets/", kTestSave);
+    check(savedSettings.isSoundMuted(), "sound setting survives game reload");
+    game.handleKey(sf::Keyboard::S);
+    check(!game.isSoundMuted(), "sound can be turned back on");
+    game.handleKey(sf::Keyboard::Escape);
     game.mousePressed(sf::Vector2f(480.f, 255.f));
     check(game.getState() == GameState::Playing, "start button works");
     check(game.getCurrentChapter() == 1, "fresh game starts chapter one");
@@ -167,9 +185,11 @@ int main() {
         game.update(1.f / 60.f, false, true, false);
     }
     check(game.getState() == GameState::Dead, "walking into a trap opens death screen");
+    check(game.getRunSummary().getRunDeaths() == 1, "death updates the run summary");
     snapshot(game, target, "dead");
     game.handleKey(sf::Keyboard::Enter);
     check(game.getState() == GameState::Playing, "enter retries after death");
+    check(game.getRunSummary().getRetries() == 1, "retry updates the run summary");
     game.enableGhostReplay();
     for (int i = 0; i < 600 && game.getState() == GameState::Playing; ++i) {
         game.update(1.f / 60.f, false, true, false);
@@ -210,16 +230,22 @@ int main() {
     game.handleKey(sf::Keyboard::Enter);
     check(game.getState() == GameState::Credits, "credits follow completion");
     snapshot(game, target, "credits");
+    check(game.getRunSummary().getChaptersCleared() == 3, "run summary counts cleared chapters");
     game.handleKey(sf::Keyboard::Escape);
     check(game.getState() == GameState::Victory, "credits returns to results");
     game.returnToMenu();
     game.start();
     snapshot(game, target, "fresh_run");
+    check(game.getRunSummary().getRunDeaths() == 0 && game.getRunSummary().getRetries() == 0,
+          "new run resets temporary statistics");
     check(!game.hasGhost() && !game.hasPopupPlatform(), "new game clears future chapter interactions");
     game.win();
     check(game.getState() == GameState::Victory, "boss hook opens final victory");
     snapshot(game, target, "final_victory");
     game.returnToMenu();
+    Game reloaded("assets/", kTestSave);
+    check(reloaded.getHighestUnlockedChapter() >= 3, "unlocked chapters survive restart");
+    check(reloaded.startChapter(3), "reloaded level select can start an unlocked existing chapter");
     game.mousePressed(sf::Vector2f(480.f, 430.f));
     check(game.wantsQuit(), "quit button works");
     SoundSystem sounds;

@@ -11,12 +11,14 @@ enum class SoundCue {
     Patch,
     Chapter,
     FakeWin,
+    Locked,
+    Save,
     Victory
 };
 
 class SoundSystem {
 public:
-    static const int CUE_COUNT = 7;
+    static const int CUE_COUNT = 9;
 
     SoundSystem();
     void play(SoundCue cue);

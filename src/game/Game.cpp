@@ -12,8 +12,8 @@ Game::Game(const string& assetFolder, const string& savePath)
     : player_(Position(80.f, 444.f)), level_("01 everything is fine"),
       state_(GameState::Menu), chapter_(1), ui_(assetFolder), savePath_(savePath), quit_(false),
       finalVictory_(false), ghostReplayEnabled_(false), interfacePopupEnabled_(false),
-      chapterStartDeaths_(0), shownPatch_(0), messageTimer_(0.f),
-      patchPopupTimer_(0.f), stateTimer_(0.f), runTime_(0.f), menuPage_(MenuPage::Main) {
+      shownPatch_(0), messageTimer_(0.f), patchPopupTimer_(0.f), stateTimer_(0.f),
+      menuPage_(MenuPage::Main) {
     progress_.load(savePath_);
     sounds_.setMuted(progress_.isMuted());
     loadChapter(1);
@@ -35,7 +35,7 @@ void Game::loadChapter(int n) {
     dev_ = DeveloperDirector();
     dev_.setPatchHappy(chapter_ == 3);
     dev_.onLevelStart(level_);
-    chapterStartDeaths_ = player_.getDeathCount();
+    summary_.startChapter();
     shownPatch_ = patches_.getAnnouncementCount();
     patchPopupTimer_ = 0.f;
     stateTimer_ = 0.f;
@@ -66,7 +66,7 @@ bool Game::startChapter(int chapter) {
     patches_.clearAll(player_, level_);
     // a new run really is fresh, retries still keep the deaths
     player_ = Player(Position(80.f, 444.f));
-    runTime_ = 0.f;
+    summary_.reset();
     finalVictory_ = false;
     loadChapter(chapter);
     state_ = GameState::Playing;
@@ -102,6 +102,7 @@ void Game::retry() {
     popup_.setEnabled(interfacePopupEnabled_);
     state_ = GameState::Playing;
     progress_.addRetry();
+    summary_.addRetry();
     saveProgress();
     showMessage(dev_.getLastTaunt());
     sounds_.play(SoundCue::Click);
@@ -132,9 +133,11 @@ void Game::showFakeVictory() {
 
 void Game::continueChapter() {
     if (state_ != GameState::ChapterClear) return;
-    const int deaths = player_.getDeathCount() - chapterStartDeaths_;
+    const int deaths = summary_.getChapterDeaths();
     progress_.completeChapter(chapter_, deaths);
+    summary_.addChapterClear();
     saveProgress();
+    sounds_.play(SoundCue::Save);
     if (chapter_ < 3) {
         loadChapter(chapter_ + 1);
         state_ = GameState::Playing;
@@ -214,6 +217,7 @@ int Game::getCurrentChapter() const { return chapter_; }
 int Game::getHighestUnlockedChapter() const { return progress_.getHighestUnlocked(); }
 MenuPage Game::getMenuPage() const { return menuPage_; }
 bool Game::isSoundMuted() const { return sounds_.isMuted(); }
+const RunSummary& Game::getRunSummary() const { return summary_; }
 
 void Game::saveProgress() { progress_.save(savePath_); }
 
@@ -249,7 +253,7 @@ void Game::handleMenuKey(sf::Keyboard::Key key) {
     else if (key == sf::Keyboard::Num5 || key == sf::Keyboard::Numpad5) chapter = 5;
     else if (key == sf::Keyboard::Num6 || key == sf::Keyboard::Numpad6) chapter = 6;
     if (chapter > 0) {
-        if (!startChapter(chapter)) sounds_.play(SoundCue::Death);
+        if (!startChapter(chapter)) sounds_.play(SoundCue::Locked);
     }
 }
 
@@ -270,7 +274,7 @@ void Game::handleMenuClick(const sf::Vector2f& mouse) {
         const float x = i % 2 == 0 ? 190.f : 490.f;
         const float y = 220.f + (i / 2) * 62.f;
         if (!sf::FloatRect(x, y, 280.f, 46.f).contains(mouse)) continue;
-        if (!startChapter(i + 1)) sounds_.play(SoundCue::Death);
+        if (!startChapter(i + 1)) sounds_.play(SoundCue::Locked);
         return;
     }
     if (sf::FloatRect(290.f, 420.f, 380.f, 44.f).contains(mouse)) showMenuPage(MenuPage::Main);
@@ -328,7 +332,7 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     if (state_ == GameState::ChapterClear) { stateTimer_ += dt; return; }
     if (state_ != GameState::Playing) return;
 
-    runTime_ += dt;
+    summary_.update(dt);
     if (messageTimer_ > 0.f) messageTimer_ -= dt;
     if (patchPopupTimer_ > 0.f) patchPopupTimer_ -= dt;
     if (ghostReplayEnabled_) {
@@ -343,6 +347,7 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     checkPatchMessage();
     if (!player_.isAlive()) {
         progress_.addDeath();
+        summary_.addDeath();
         saveProgress();
         if (ghostReplayEnabled_) attempts_.finishAttempt();
         state_ = GameState::Dead;
@@ -410,7 +415,7 @@ void Game::drawScreen(sf::RenderTarget& target) const {
     } else if (state_ == GameState::ChapterClear) {
         title = chapter_ == 1 && stateTimer_ < 1.5f ? "congratulations!" : "player review";
         line = chapter_ == 1 ? "you finished the tutorial. thats it." : "chapter cleared. suspicious.";
-        const int deaths = player_.getDeathCount() - chapterStartDeaths_;
+        const int deaths = summary_.getChapterDeaths();
         detail = "chapter deaths: " + to_string(deaths) + " / rating: ";
         detail += deaths == 0 ? "probably luck" : (deaths < 5 ? "concerning" : "very committed");
         first = "enter / continue suffering";
@@ -423,8 +428,9 @@ void Game::drawScreen(sf::RenderTarget& target) const {
     } else if (state_ == GameState::Victory) {
         title = finalVictory_ ? "the final hotfix" : "current build cleared";
         line = finalVictory_ ? "you reached the switch. dev has disconnected." : "all 3 chapters done. dev is making more.";
-        detail = "total deaths: " + to_string(player_.getDeathCount()) + " / time: "
-                 + to_string(static_cast<int>(runTime_)) + "s";
+        detail = "run deaths: " + to_string(summary_.getRunDeaths()) + " / retries: "
+                 + to_string(summary_.getRetries()) + " / time: "
+                 + to_string(static_cast<int>(summary_.getPlayTime())) + "s";
         first = "enter / credits";
     } else if (state_ == GameState::Credits) {
         title = "blame these people";
@@ -440,8 +446,9 @@ void Game::drawScreen(sf::RenderTarget& target) const {
     const float detailX = (960.f - detail.size() * 9.64f) * 0.5f;
     ui_.text(target, detail, detailX, 225.f, 16, sf::Color(185, 175, 205));
     if (state_ == GameState::Credits) {
-        ui_.text(target, "abdullah / screens sound and integration", 292.f, 261.f, 16);
-        ui_.text(target, "font: dejavu sans mono / license in assets/fonts", 259.f, 294.f, 14);
+        ui_.text(target, "abdullah / screens sound and integration", 292.f, 253.f, 16);
+        ui_.text(target, "chapters cleared this run: " + to_string(summary_.getChaptersCleared()), 313.f, 279.f, 14);
+        ui_.text(target, "font: dejavu sans mono / license in assets/fonts", 259.f, 302.f, 14);
     } else if (state_ == GameState::Dead && patches_.getActiveCount() > 0) {
         ui_.text(target, patchMessage_, 80.f, 273.f, 14, sf::Color(240, 190, 255));
     }
@@ -456,6 +463,9 @@ void Game::drawMenu(sf::RenderTarget& target) const {
     if (menuPage_ == MenuPage::Main) {
         ui_.text(target, "ragebait maxxing", 309.f, 105.f, 36, sf::Color(220, 190, 255));
         ui_.text(target, "a game with your best interests at heart", 264.f, 163.f, 17);
+        ui_.text(target, "saved deaths: " + to_string(progress_.getTotalDeaths())
+                 + "   saved retries: " + to_string(progress_.getTotalRetries()),
+                 324.f, 193.f, 13, sf::Color(175, 165, 195));
         int chapter = progress_.getHighestUnlocked();
         if (chapter > 3) chapter = 3;
         ui_.button(target, "enter / continue chapter " + to_string(chapter), 290.f, 235.f, 380.f, 46.f);
@@ -467,6 +477,8 @@ void Game::drawMenu(sf::RenderTarget& target) const {
     if (menuPage_ == MenuPage::Settings) {
         ui_.text(target, "reliable settings", 320.f, 125.f, 32, sf::Color(220, 190, 255));
         ui_.text(target, "these buttons are legally required to work", 274.f, 195.f, 16);
+        ui_.text(target, "progress saves beside the game", 350.f, 238.f, 13,
+                 sf::Color(175, 165, 195));
         ui_.button(target, sounds_.isMuted() ? "s / sound off" : "s / sound on", 290.f, 285.f, 380.f, 48.f);
         ui_.button(target, "esc / back", 290.f, 355.f, 380.f, 48.f);
         return;

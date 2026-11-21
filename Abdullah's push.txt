@@ -96,3 +96,38 @@ tests need the same sfml dlls as the game on windows
 
 when you run it try start jump die twice retry pause and resume then m and enter
 deaths should be zero on the fresh run and patches should still wait while paused or dead
+
+21/11/2026
+
+hey team abdullah again, saves level select and the later chapter hooks are cleaned up
+
+what changed
+menu has continue level select settings and exit now
+progress save keeps six chapter slots, unlocked chapters, best deaths, totals and sound setting
+only chapters 1-3 can start for now so coming soon never loads the wrong layout
+missing broken or future save files just start safe from chapter 1
+save sits beside the exe as ragebait_save.txt
+
+ghost part
+GhostReplay is its own small class now, AttemptRecorder still owns the fixed frame arrays
+enableGhostReplay starts recording, death or retry stores the attempt and retry rewinds it
+pause death fake win and menus dont move the replay timer
+getGhostBounds is still just a hook for hussains switch checks, no world collision added here
+
+popup and fake win part
+popup has proper enable disable reset drag drop and close state
+getPopupPlatformBounds is still the hook for hussains platform collision
+showFakeVictory freezes the same attempt then enter sends you back to it
+win is still the real final result hook for arsalans boss
+
+screens and totals
+reviews show chapter deaths and results show run deaths retries and active time
+saved totals show on the menu, credits show how many chapters cleared this run
+settings and sound survive restarting the game
+
+same boundaries as before
+didnt touch traps patches levelbuilder collisions exits checkpoints switches doors or boss phases
+no vector no memory header no extra libraries, just classes fixed arrays text files and if checks
+
+checked with sfml 2.6.2 and warnings on
+tests cover save reload bad saves locked chapters settings ghost timing popup state fake and real wins and clean run reset

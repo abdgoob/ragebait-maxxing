@@ -8,7 +8,7 @@ SoundSystem::SoundSystem() : muted_(false) {
     const int sampleRate = 22050;
     const int sampleCount = 11025;
     sf::Int16 samples[sampleCount];
-    const float notes[CUE_COUNT] = {660.f, 440.f, 220.f, 780.f, 520.f, 880.f, 660.f};
+    const float notes[CUE_COUNT] = {660.f, 440.f, 220.f, 780.f, 520.f, 880.f, 160.f, 720.f, 660.f};
     for (int cue = 0; cue < CUE_COUNT; ++cue) {
         float phase = 0.f;
         for (int i = 0; i < sampleCount; ++i) {

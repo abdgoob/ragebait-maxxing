@@ -8,6 +8,7 @@
 #include "game/AttemptRecorder.h"
 #include "game/ProgressSave.h"
 #include "game/GhostReplay.h"
+#include "game/RunSummary.h"
 #include "ui/GameUI.h"
 #include "ui/PopupWindow.h"
 
@@ -61,6 +62,7 @@ public:
     int getHighestUnlockedChapter() const;
     MenuPage getMenuPage() const;
     bool isSoundMuted() const;
+    const RunSummary& getRunSummary() const;
 
     // hooks for hussain's ghost switches and chapter 5 platforms
     void setGhostReplayEnabled(bool on);
@@ -91,17 +93,16 @@ private:
     GhostReplay ghost_;
     PopupWindow popup_;
     ProgressSave progress_;
+    RunSummary summary_;
     string savePath_;
     bool quit_;
     bool finalVictory_;
     bool ghostReplayEnabled_;
     bool interfacePopupEnabled_;
-    int chapterStartDeaths_;
     int shownPatch_;
     float messageTimer_;
     float patchPopupTimer_;
     float stateTimer_;
-    float runTime_;
     string message_;
     string patchMessage_;
     string patchVersion_;
