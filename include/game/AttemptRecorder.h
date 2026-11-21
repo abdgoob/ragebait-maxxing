@@ -11,7 +11,9 @@ public:
 
     AttemptRecorder();
     void clear();
+    void startAttempt();
     void startAttempt(const Position& start);
+    void record(const Position& position);
     void record(float dt, const Position& position);
     void finishAttempt();
     void updateReplay(float dt);

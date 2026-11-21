@@ -40,10 +40,10 @@ void Game::loadChapter(int n) {
     patchPopupTimer_ = 0.f;
     stateTimer_ = 0.f;
     attempts_.clear();
-    attempts_.startAttempt(player_.getPosition());
     ghostReplayEnabled_ = false;
     interfacePopupEnabled_ = false;
-    popup_.reset();
+    ghost_.reset();
+    popup_.setEnabled(false);
     showMessage(dev_.getLastTaunt());
 }
 
@@ -90,12 +90,16 @@ void Game::resume() {
 void Game::retry() {
     if (state_ != GameState::Playing && state_ != GameState::Dead) return;
     // manual retry also counts as an attempt for the future ghost chapter
-    if (state_ == GameState::Playing) attempts_.finishAttempt();
+    if (ghostReplayEnabled_ && state_ == GameState::Playing) attempts_.finishAttempt();
     patches_.applyQueued(player_, level_);
     level_.resetTraps();
     dev_.onRetry(player_);
-    attempts_.startAttempt(player_.getPosition());
-    popup_.reset();
+    if (ghostReplayEnabled_) {
+        attempts_.startAttempt(player_.getPosition());
+        ghost_.setVisible(attempts_.hasGhost());
+        if (attempts_.hasGhost()) ghost_.setPosition(attempts_.getGhostPosition());
+    }
+    popup_.setEnabled(interfacePopupEnabled_);
     state_ = GameState::Playing;
     progress_.addRetry();
     saveProgress();
@@ -117,6 +121,13 @@ void Game::completeChapter() {
     stateTimer_ = 0.f;
     popup_.release();
     sounds_.play(chapter_ == 1 ? SoundCue::FakeWin : SoundCue::Chapter);
+}
+
+void Game::showFakeVictory() {
+    if (state_ != GameState::Playing) return;
+    state_ = GameState::FakeVictory;
+    popup_.release();
+    sounds_.play(SoundCue::FakeWin);
 }
 
 void Game::continueChapter() {
@@ -167,6 +178,7 @@ void Game::handleKey(sf::Keyboard::Key key) {
     else if (state_ == GameState::Paused) resume();
     else if (state_ == GameState::Dead) retry();
     else if (state_ == GameState::ChapterClear) continueChapter();
+    else if (state_ == GameState::FakeVictory) state_ = GameState::Playing;
     else if (state_ == GameState::Victory) state_ = GameState::Credits;
     else if (state_ == GameState::Credits) returnToMenu();
 }
@@ -264,16 +276,39 @@ void Game::handleMenuClick(const sf::Vector2f& mouse) {
     if (sf::FloatRect(290.f, 420.f, 380.f, 44.f).contains(mouse)) showMenuPage(MenuPage::Main);
 }
 
-void Game::setGhostReplayEnabled(bool on) { ghostReplayEnabled_ = on; }
+void Game::setGhostReplayEnabled(bool on) {
+    if (on) enableGhostReplay();
+    else disableGhostReplay();
+}
 void Game::setInterfacePopupEnabled(bool on) {
-    interfacePopupEnabled_ = on;
-    popup_.reset();
+    if (on) enableInterfacePopup();
+    else disableInterfacePopup();
 }
-bool Game::hasGhost() const { return ghostReplayEnabled_ && attempts_.hasGhost(); }
-sf::FloatRect Game::getGhostBounds() const {
-    const Position& p = attempts_.getGhostPosition();
-    return sf::FloatRect(p.getX(), p.getY(), 28.f, 36.f);
+
+void Game::enableGhostReplay() {
+    ghostReplayEnabled_ = true;
+    attempts_.clear();
+    attempts_.startAttempt(player_.getPosition());
+    ghost_.reset();
 }
+
+void Game::disableGhostReplay() {
+    ghostReplayEnabled_ = false;
+    attempts_.clear();
+    ghost_.reset();
+}
+
+void Game::enableInterfacePopup() {
+    interfacePopupEnabled_ = true;
+    popup_.setEnabled(true);
+}
+
+void Game::disableInterfacePopup() {
+    interfacePopupEnabled_ = false;
+    popup_.setEnabled(false);
+}
+bool Game::hasGhost() const { return ghostReplayEnabled_ && ghost_.isVisible(); }
+sf::FloatRect Game::getGhostBounds() const { return ghost_.getBounds(); }
 bool Game::hasPopupPlatform() const { return interfacePopupEnabled_ && popup_.isPlatform(); }
 sf::FloatRect Game::getPopupPlatformBounds() const { return popup_.getPlatformBounds(); }
 
@@ -296,16 +331,20 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     runTime_ += dt;
     if (messageTimer_ > 0.f) messageTimer_ -= dt;
     if (patchPopupTimer_ > 0.f) patchPopupTimer_ -= dt;
-    attempts_.updateReplay(dt);
+    if (ghostReplayEnabled_) {
+        attempts_.updateReplay(dt);
+        ghost_.setVisible(attempts_.hasGhost());
+        if (attempts_.hasGhost()) ghost_.setPosition(attempts_.getGhostPosition());
+    }
     const float oldYVelocity = player_.getVelocity().getY();
     player_.handleInput(left, right, jump);
     level_.update(dt, player_, dev_, patches_);
-    attempts_.record(dt, player_.getPosition());
+    if (ghostReplayEnabled_) attempts_.record(dt, player_.getPosition());
     checkPatchMessage();
     if (!player_.isAlive()) {
         progress_.addDeath();
         saveProgress();
-        attempts_.finishAttempt();
+        if (ghostReplayEnabled_) attempts_.finishAttempt();
         state_ = GameState::Dead;
         showMessage(dev_.getLastTaunt());
         sounds_.play(SoundCue::Death);
@@ -375,6 +414,12 @@ void Game::drawScreen(sf::RenderTarget& target) const {
         detail = "chapter deaths: " + to_string(deaths) + " / rating: ";
         detail += deaths == 0 ? "probably luck" : (deaths < 5 ? "concerning" : "very committed");
         first = "enter / continue suffering";
+    } else if (state_ == GameState::FakeVictory) {
+        title = "congratulations!";
+        line = "you won. please stop looking at the level.";
+        detail = "victory status: extremely real";
+        first = "enter / accept victory";
+        second = "m / suspiciously return to menu";
     } else if (state_ == GameState::Victory) {
         title = finalVictory_ ? "the final hotfix" : "current build cleared";
         line = finalVictory_ ? "you reached the switch. dev has disconnected." : "all 3 chapters done. dev is making more.";
@@ -444,10 +489,7 @@ void Game::drawMenu(sf::RenderTarget& target) const {
 void Game::draw(sf::RenderTarget& target) const {
     level_.draw(target);
     if (state_ != GameState::Menu) player_.draw(target);
-    if (hasGhost()) {
-        const sf::FloatRect ghost = getGhostBounds();
-        ui_.box(target, ghost.left, ghost.top, ghost.width, ghost.height, sf::Color(130, 210, 255, 95));
-    }
+    if (hasGhost()) ghost_.draw(target);
     if (interfacePopupEnabled_ && state_ != GameState::Menu) popup_.draw(target, ui_);
     if (state_ != GameState::Menu) drawHud(target);
     if (state_ != GameState::Playing) drawScreen(target);

@@ -7,6 +7,7 @@
 #include "audio/SoundSystem.h"
 #include "game/AttemptRecorder.h"
 #include "game/ProgressSave.h"
+#include "game/GhostReplay.h"
 #include "ui/GameUI.h"
 #include "ui/PopupWindow.h"
 
@@ -18,6 +19,7 @@ enum class GameState {
     Paused,
     Dead,
     ChapterClear,
+    FakeVictory,
     Victory,
     Credits
 };
@@ -45,6 +47,7 @@ public:
     void returnToMenu();
     void continueChapter();
     void completeChapter();
+    void showFakeVictory();
     void win();
 
     void handleKey(sf::Keyboard::Key key);
@@ -62,6 +65,10 @@ public:
     // hooks for hussain's ghost switches and chapter 5 platforms
     void setGhostReplayEnabled(bool on);
     void setInterfacePopupEnabled(bool on);
+    void enableGhostReplay();
+    void disableGhostReplay();
+    void enableInterfacePopup();
+    void disableInterfacePopup();
     bool hasGhost() const;
     sf::FloatRect getGhostBounds() const;
     bool hasPopupPlatform() const;
@@ -81,6 +88,7 @@ private:
     GameUI ui_;
     SoundSystem sounds_;
     AttemptRecorder attempts_;
+    GhostReplay ghost_;
     PopupWindow popup_;
     ProgressSave progress_;
     string savePath_;

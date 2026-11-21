@@ -8,6 +8,8 @@ using namespace std;
 class PopupWindow {
 public:
     PopupWindow();
+    void setEnabled(bool enabled);
+    bool isEnabled() const;
     void reset();
     bool press(const sf::Vector2f& mouse);
     void move(const sf::Vector2f& mouse);
@@ -22,6 +24,7 @@ private:
     sf::Vector2f position_;
     sf::Vector2f dragOffset_;
     bool open_;
+    bool enabled_;
     bool dragging_;
     bool placed_;
     int closeDodges_;

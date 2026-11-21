@@ -27,6 +27,9 @@ void snapshot(Game& game, sf::RenderTexture& target, const string& name) {
 
 void checkRecording() {
     AttemptRecorder attempts;
+    attempts.startAttempt();
+    attempts.record(Position(1.f, 2.f));
+    attempts.clear();
     attempts.startAttempt(Position(0.f, 0.f));
     attempts.record(0.02f, Position(20.f, 40.f));
     attempts.record(0.04f, Position(60.f, 80.f));
@@ -45,9 +48,22 @@ void checkRecording() {
     check(!attempts.hasGhost() && !attempts.isRecordingFull(), "new chapter clears recording");
 }
 
+void checkGhostReplay() {
+    GhostReplay ghost(Position(10.f, 20.f));
+    check(!ghost.isVisible(), "ghost starts hidden");
+    ghost.setVisible(true);
+    check(ghost.isVisible() && ghost.getBounds().left == 10.f, "ghost exposes its future switch bounds");
+    ghost.setPosition(Position(30.f, 40.f));
+    check(ghost.getPosition() == Position(30.f, 40.f), "ghost presentation follows recorder position");
+    ghost.reset();
+    check(!ghost.isVisible(), "ghost reset hides it");
+}
+
 void checkPopup() {
     PopupWindow popup;
-    check(popup.isOpen() && !popup.isPlatform(), "popup starts open");
+    check(!popup.isEnabled() && !popup.isOpen(), "popup starts disabled outside its chapter");
+    popup.setEnabled(true);
+    check(popup.isOpen() && !popup.isPlatform(), "enabled popup starts open");
     check(popup.press(sf::Vector2f(600.f, 240.f)), "title bar accepts drag");
     popup.move(sf::Vector2f(310.f, 320.f));
     check(!popup.isPlatform(), "dragging is not a platform yet");
@@ -55,12 +71,15 @@ void checkPopup() {
     check(popup.isPlatform(), "dropped popup exposes a platform");
     check(fabs(popup.getPlatformBounds().left - 250.f) < 0.01f, "drag keeps the original grab offset");
     popup.reset();
+    popup.setEnabled(true);
     popup.press(sf::Vector2f(830.f, 238.f));
     check(popup.isOpen(), "close button dodges first click");
     popup.press(sf::Vector2f(565.f, 238.f));
     popup.press(sf::Vector2f(830.f, 238.f));
     popup.press(sf::Vector2f(565.f, 238.f));
     check(!popup.isOpen() && !popup.isPlatform(), "close eventually works");
+    popup.setEnabled(false);
+    check(!popup.isEnabled() && !popup.press(sf::Vector2f(550.f, 230.f)), "disabled popup ignores input");
 }
 
 void checkPatchMessages() {
@@ -122,6 +141,7 @@ void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
 int main() {
     checkProgressSave();
     checkRecording();
+    checkGhostReplay();
     checkPopup();
     checkPatchMessages();
     sf::RenderTexture target;
@@ -150,6 +170,7 @@ int main() {
     snapshot(game, target, "dead");
     game.handleKey(sf::Keyboard::Enter);
     check(game.getState() == GameState::Playing, "enter retries after death");
+    game.enableGhostReplay();
     for (int i = 0; i < 600 && game.getState() == GameState::Playing; ++i) {
         game.update(1.f / 60.f, false, true, false);
     }
@@ -157,7 +178,6 @@ int main() {
     snapshot(game, target, "dead_patch");
     checkFrozenScreen(game, target);
     game.retry();
-    game.setGhostReplayEnabled(true);
     check(game.hasGhost(), "ghost integration can use the previous attempt");
     snapshot(game, target, "ghost_hook");
     snapshot(game, target, "playing_patch");
@@ -165,12 +185,18 @@ int main() {
     check(game.getState() == GameState::Paused, "losing focus pauses");
     checkFrozenScreen(game, target);
     game.resume();
-    game.setInterfacePopupEnabled(true);
+    game.enableInterfacePopup();
     game.mousePressed(sf::Vector2f(600.f, 240.f));
     game.mouseMoved(sf::Vector2f(310.f, 320.f));
     game.mouseReleased();
     check(game.hasPopupPlatform(), "game exposes the dropped popup to level collision code");
     snapshot(game, target, "popup_hook");
+    game.showFakeVictory();
+    check(game.getState() == GameState::FakeVictory, "fake victory has its own frozen screen");
+    snapshot(game, target, "fake_victory");
+    game.handleKey(sf::Keyboard::Enter);
+    check(game.getState() == GameState::Playing, "accepting fake victory returns to the same attempt");
+    check(game.hasPopupPlatform(), "fake victory keeps the current interaction state");
     for (int chapter = 1; chapter <= 3; ++chapter) {
         game.completeChapter();
         check(game.getState() == GameState::ChapterClear, "exit hook opens chapter review");

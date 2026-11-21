@@ -8,10 +8,25 @@ void PopupWindow::reset() {
     position_ = sf::Vector2f(540.f, 220.f);
     dragOffset_ = sf::Vector2f();
     open_ = true;
+    enabled_ = false;
     dragging_ = false;
     placed_ = false;
     closeDodges_ = 0;
 }
+
+void PopupWindow::setEnabled(bool enabled) {
+    if (!enabled) {
+        enabled_ = false;
+        open_ = false;
+        dragging_ = false;
+        placed_ = false;
+        return;
+    }
+    reset();
+    enabled_ = true;
+}
+
+bool PopupWindow::isEnabled() const { return enabled_; }
 
 sf::FloatRect PopupWindow::closeBounds() const {
     const float x = closeDodges_ % 2 == 0 ? 276.f : 12.f;
@@ -19,7 +34,7 @@ sf::FloatRect PopupWindow::closeBounds() const {
 }
 
 bool PopupWindow::press(const sf::Vector2f& mouse) {
-    if (!open_) return false;
+    if (!enabled_ || !open_) return false;
     if (closeBounds().contains(mouse)) {
         if (closeDodges_ < 3) ++closeDodges_;
         else open_ = false;
@@ -35,7 +50,7 @@ bool PopupWindow::press(const sf::Vector2f& mouse) {
 }
 
 void PopupWindow::move(const sf::Vector2f& mouse) {
-    if (!open_ || !dragging_) return;
+    if (!enabled_ || !open_ || !dragging_) return;
     position_ = mouse - dragOffset_;
     if (position_.x < 0.f) position_.x = 0.f;
     if (position_.x > 640.f) position_.x = 640.f;
@@ -49,7 +64,7 @@ void PopupWindow::release() {
 }
 
 void PopupWindow::draw(sf::RenderTarget& target, const GameUI& ui) const {
-    if (!open_) return;
+    if (!enabled_ || !open_) return;
     ui.box(target, position_.x, position_.y, 320.f, 146.f, sf::Color(225, 218, 238));
     ui.box(target, position_.x, position_.y, 320.f, 38.f, sf::Color(100, 65, 150));
     ui.text(target, "experience update", position_.x + 48.f, position_.y + 10.f, 14);
@@ -64,8 +79,8 @@ void PopupWindow::draw(sf::RenderTarget& target, const GameUI& ui) const {
             14, sf::Color(65, 45, 85));
 }
 
-bool PopupWindow::isOpen() const { return open_; }
-bool PopupWindow::isPlatform() const { return open_ && placed_ && !dragging_; }
+bool PopupWindow::isOpen() const { return enabled_ && open_; }
+bool PopupWindow::isPlatform() const { return enabled_ && open_ && placed_ && !dragging_; }
 sf::FloatRect PopupWindow::getPlatformBounds() const {
     return sf::FloatRect(position_.x, position_.y, 320.f, 12.f);
 }

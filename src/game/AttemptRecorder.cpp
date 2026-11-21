@@ -13,6 +13,8 @@ void AttemptRecorder::clear() {
     ghost_ = Position();
 }
 
+void AttemptRecorder::startAttempt() { startAttempt(Position()); }
+
 void AttemptRecorder::startAttempt(const Position& start) {
     currentCount_ = 1;
     current_[0].position = start;
@@ -29,6 +31,10 @@ void AttemptRecorder::record(float dt, const Position& position) {
     current_[currentCount_].position = position;
     current_[currentCount_].time = recordTime_;
     ++currentCount_;
+}
+
+void AttemptRecorder::record(const Position& position) {
+    record(1.f / 60.f, position);
 }
 
 void AttemptRecorder::finishAttempt() {
