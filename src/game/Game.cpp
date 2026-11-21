@@ -4,14 +4,18 @@
 
 using namespace std;
 
-Game::Game() : Game("assets/") {}
+Game::Game() : Game("assets/", "ragebait_save.txt") {}
 
-Game::Game(const string& assetFolder)
+Game::Game(const string& assetFolder) : Game(assetFolder, "ragebait_save.txt") {}
+
+Game::Game(const string& assetFolder, const string& savePath)
     : player_(Position(80.f, 444.f)), level_("01 everything is fine"),
-      state_(GameState::Menu), chapter_(1), ui_(assetFolder), quit_(false),
+      state_(GameState::Menu), chapter_(1), ui_(assetFolder), savePath_(savePath), quit_(false),
       finalVictory_(false), ghostReplayEnabled_(false), interfacePopupEnabled_(false),
       chapterStartDeaths_(0), shownPatch_(0), messageTimer_(0.f),
-      patchPopupTimer_(0.f), stateTimer_(0.f), runTime_(0.f) {
+      patchPopupTimer_(0.f), stateTimer_(0.f), runTime_(0.f), menuPage_(MenuPage::Main) {
+    progress_.load(savePath_);
+    sounds_.setMuted(progress_.isMuted());
     loadChapter(1);
 }
 
@@ -51,14 +55,23 @@ void Game::showMessage(const string& words) {
 
 void Game::start() {
     if (state_ != GameState::Menu) return;
+    int chapter = progress_.getHighestUnlocked();
+    if (chapter > 3) chapter = 3;
+    startChapter(chapter);
+}
+
+bool Game::startChapter(int chapter) {
+    if (state_ != GameState::Menu) return false;
+    if (chapter < 1 || chapter > 3 || !progress_.isUnlocked(chapter)) return false;
     patches_.clearAll(player_, level_);
     // a new run really is fresh, retries still keep the deaths
     player_ = Player(Position(80.f, 444.f));
     runTime_ = 0.f;
     finalVictory_ = false;
-    loadChapter(1);
+    loadChapter(chapter);
     state_ = GameState::Playing;
     sounds_.play(SoundCue::Click);
+    return true;
 }
 
 void Game::pause() {
@@ -84,6 +97,8 @@ void Game::retry() {
     attempts_.startAttempt(player_.getPosition());
     popup_.reset();
     state_ = GameState::Playing;
+    progress_.addRetry();
+    saveProgress();
     showMessage(dev_.getLastTaunt());
     sounds_.play(SoundCue::Click);
 }
@@ -91,6 +106,7 @@ void Game::retry() {
 void Game::returnToMenu() {
     if (state_ == GameState::Menu) return;
     state_ = GameState::Menu;
+    menuPage_ = MenuPage::Main;
     popup_.release();
     sounds_.stopAll();
 }
@@ -105,6 +121,9 @@ void Game::completeChapter() {
 
 void Game::continueChapter() {
     if (state_ != GameState::ChapterClear) return;
+    const int deaths = player_.getDeathCount() - chapterStartDeaths_;
+    progress_.completeChapter(chapter_, deaths);
+    saveProgress();
     if (chapter_ < 3) {
         loadChapter(chapter_ + 1);
         state_ = GameState::Playing;
@@ -126,8 +145,12 @@ void Game::win() {
 }
 
 void Game::handleKey(sf::Keyboard::Key key) {
+    if (state_ == GameState::Menu) {
+        handleMenuKey(key);
+        return;
+    }
     if (key == sf::Keyboard::S) {
-        sounds_.toggleMute();
+        toggleSound();
         return;
     }
     if (key == sf::Keyboard::Q) { quit_ = true; return; }
@@ -154,6 +177,10 @@ void Game::mouseMoved(const sf::Vector2f& mouse) {
 }
 
 void Game::mousePressed(const sf::Vector2f& mouse) {
+    if (state_ == GameState::Menu) {
+        handleMenuClick(mouse);
+        return;
+    }
     if (state_ == GameState::Playing && interfacePopupEnabled_) {
         if (popup_.press(mouse)) sounds_.play(SoundCue::Click);
         return;
@@ -162,8 +189,7 @@ void Game::mousePressed(const sf::Vector2f& mouse) {
     if (sf::FloatRect(290.f, 330.f, 380.f, 48.f).contains(mouse)) {
         handleKey(sf::Keyboard::Enter);
     } else if (sf::FloatRect(290.f, 390.f, 380.f, 48.f).contains(mouse)) {
-        if (state_ == GameState::Menu) quit_ = true;
-        else if (state_ == GameState::Credits) state_ = GameState::Victory;
+        if (state_ == GameState::Credits) state_ = GameState::Victory;
         else returnToMenu();
     }
 }
@@ -172,6 +198,71 @@ void Game::mouseReleased() { popup_.release(); }
 void Game::lostFocus() { mouseReleased(); pause(); }
 bool Game::wantsQuit() const { return quit_; }
 bool Game::isReady() const { return ui_.isReady(); }
+int Game::getCurrentChapter() const { return chapter_; }
+int Game::getHighestUnlockedChapter() const { return progress_.getHighestUnlocked(); }
+MenuPage Game::getMenuPage() const { return menuPage_; }
+bool Game::isSoundMuted() const { return sounds_.isMuted(); }
+
+void Game::saveProgress() { progress_.save(savePath_); }
+
+void Game::toggleSound() {
+    sounds_.toggleMute();
+    progress_.setMuted(sounds_.isMuted());
+    saveProgress();
+}
+
+void Game::showMenuPage(MenuPage page) {
+    menuPage_ = page;
+    sounds_.play(SoundCue::Click);
+}
+
+void Game::handleMenuKey(sf::Keyboard::Key key) {
+    if (key == sf::Keyboard::Q) { quit_ = true; return; }
+    if (key == sf::Keyboard::Escape) { showMenuPage(MenuPage::Main); return; }
+    if (menuPage_ == MenuPage::Main) {
+        if (key == sf::Keyboard::Enter) start();
+        else if (key == sf::Keyboard::L) showMenuPage(MenuPage::LevelSelect);
+        else if (key == sf::Keyboard::O) showMenuPage(MenuPage::Settings);
+        return;
+    }
+    if (menuPage_ == MenuPage::Settings) {
+        if (key == sf::Keyboard::S || key == sf::Keyboard::Enter) toggleSound();
+        return;
+    }
+    int chapter = 0;
+    if (key == sf::Keyboard::Num1 || key == sf::Keyboard::Numpad1) chapter = 1;
+    else if (key == sf::Keyboard::Num2 || key == sf::Keyboard::Numpad2) chapter = 2;
+    else if (key == sf::Keyboard::Num3 || key == sf::Keyboard::Numpad3) chapter = 3;
+    else if (key == sf::Keyboard::Num4 || key == sf::Keyboard::Numpad4) chapter = 4;
+    else if (key == sf::Keyboard::Num5 || key == sf::Keyboard::Numpad5) chapter = 5;
+    else if (key == sf::Keyboard::Num6 || key == sf::Keyboard::Numpad6) chapter = 6;
+    if (chapter > 0) {
+        if (!startChapter(chapter)) sounds_.play(SoundCue::Death);
+    }
+}
+
+void Game::handleMenuClick(const sf::Vector2f& mouse) {
+    if (menuPage_ == MenuPage::Main) {
+        if (sf::FloatRect(290.f, 235.f, 380.f, 46.f).contains(mouse)) start();
+        else if (sf::FloatRect(290.f, 293.f, 380.f, 46.f).contains(mouse)) showMenuPage(MenuPage::LevelSelect);
+        else if (sf::FloatRect(290.f, 351.f, 380.f, 46.f).contains(mouse)) showMenuPage(MenuPage::Settings);
+        else if (sf::FloatRect(290.f, 409.f, 380.f, 46.f).contains(mouse)) quit_ = true;
+        return;
+    }
+    if (menuPage_ == MenuPage::Settings) {
+        if (sf::FloatRect(290.f, 285.f, 380.f, 48.f).contains(mouse)) toggleSound();
+        else if (sf::FloatRect(290.f, 355.f, 380.f, 48.f).contains(mouse)) showMenuPage(MenuPage::Main);
+        return;
+    }
+    for (int i = 0; i < 6; ++i) {
+        const float x = i % 2 == 0 ? 190.f : 490.f;
+        const float y = 220.f + (i / 2) * 62.f;
+        if (!sf::FloatRect(x, y, 280.f, 46.f).contains(mouse)) continue;
+        if (!startChapter(i + 1)) sounds_.play(SoundCue::Death);
+        return;
+    }
+    if (sf::FloatRect(290.f, 420.f, 380.f, 44.f).contains(mouse)) showMenuPage(MenuPage::Main);
+}
 
 void Game::setGhostReplayEnabled(bool on) { ghostReplayEnabled_ = on; }
 void Game::setInterfacePopupEnabled(bool on) {
@@ -212,6 +303,8 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     attempts_.record(dt, player_.getPosition());
     checkPatchMessage();
     if (!player_.isAlive()) {
+        progress_.addDeath();
+        saveProgress();
         attempts_.finishAttempt();
         state_ = GameState::Dead;
         showMessage(dev_.getLastTaunt());
@@ -254,19 +347,17 @@ void Game::drawHud(sf::RenderTarget& target) const {
 
 void Game::drawScreen(sf::RenderTarget& target) const {
     ui_.shade(target);
+    if (state_ == GameState::Menu) {
+        drawMenu(target);
+        return;
+    }
     ui_.monitor(target, 456.f, 52.f, state_ == GameState::Dead);
     string title;
     string line;
     string detail;
     string first;
     string second = "m / back to menu";
-    if (state_ == GameState::Menu) {
-        title = "ragebait maxxing";
-        line = "a game with your best interests at heart";
-        detail = "arrows move / space jumps / esc pauses";
-        first = "enter / start suffering";
-        second = "q / quit while you can";
-    } else if (state_ == GameState::Paused) {
+    if (state_ == GameState::Paused) {
         title = "taking a break?";
         line = "fine. the traps can wait.";
         detail = "game and patch timers are paused";
@@ -313,6 +404,41 @@ void Game::drawScreen(sf::RenderTarget& target) const {
     ui_.button(target, second, 290.f, 390.f, 380.f, 48.f);
     ui_.text(target, sounds_.isMuted() ? "s / turn sound on" : "s / mute sound", 400.f, 478.f, 14,
              sf::Color(175, 165, 195));
+}
+
+void Game::drawMenu(sf::RenderTarget& target) const {
+    ui_.monitor(target, 456.f, 42.f, false);
+    if (menuPage_ == MenuPage::Main) {
+        ui_.text(target, "ragebait maxxing", 309.f, 105.f, 36, sf::Color(220, 190, 255));
+        ui_.text(target, "a game with your best interests at heart", 264.f, 163.f, 17);
+        int chapter = progress_.getHighestUnlocked();
+        if (chapter > 3) chapter = 3;
+        ui_.button(target, "enter / continue chapter " + to_string(chapter), 290.f, 235.f, 380.f, 46.f);
+        ui_.button(target, "l / level select", 290.f, 293.f, 380.f, 46.f);
+        ui_.button(target, "o / settings", 290.f, 351.f, 380.f, 46.f);
+        ui_.button(target, "q / quit while you can", 290.f, 409.f, 380.f, 46.f);
+        return;
+    }
+    if (menuPage_ == MenuPage::Settings) {
+        ui_.text(target, "reliable settings", 320.f, 125.f, 32, sf::Color(220, 190, 255));
+        ui_.text(target, "these buttons are legally required to work", 274.f, 195.f, 16);
+        ui_.button(target, sounds_.isMuted() ? "s / sound off" : "s / sound on", 290.f, 285.f, 380.f, 48.f);
+        ui_.button(target, "esc / back", 290.f, 355.f, 380.f, 48.f);
+        return;
+    }
+    ui_.text(target, "pick your suffering", 307.f, 105.f, 34, sf::Color(220, 190, 255));
+    for (int i = 0; i < 6; ++i) {
+        const int chapter = i + 1;
+        const float x = i % 2 == 0 ? 190.f : 490.f;
+        const float y = 220.f + (i / 2) * 62.f;
+        string words = to_string(chapter) + " / ";
+        if (chapter > 3) words += "coming soon";
+        else if (!progress_.isUnlocked(chapter)) words += "locked";
+        else if (progress_.isCompleted(chapter)) words += "cleared";
+        else words += "available";
+        ui_.button(target, words, x, y, 280.f, 46.f);
+    }
+    ui_.button(target, "esc / back", 290.f, 420.f, 380.f, 44.f);
 }
 
 void Game::draw(sf::RenderTarget& target) const {

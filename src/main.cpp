@@ -11,8 +11,10 @@ int main(int argc, char* argv[]) {
     // assets are copied beside the executable, also works when launched elsewhere
     string executable = argc > 0 ? argv[0] : "";
     const string::size_type slash = executable.find_last_of("/\\");
-    const string assetFolder = slash == string::npos ? "assets/" : executable.substr(0, slash + 1) + "assets/";
-    Game game(assetFolder);
+    const string executableFolder = slash == string::npos ? "" : executable.substr(0, slash + 1);
+    const string assetFolder = executableFolder + "assets/";
+    const string savePath = executableFolder + "ragebait_save.txt";
+    Game game(assetFolder, savePath);
     if (!game.isReady()) return 1;
     sf::Clock clock;
     while (window.isOpen()) {
@@ -53,8 +55,9 @@ int main(int argc, char* argv[]) {
                 changedState = true;
             }
             if (event.type != sf::Event::KeyPressed || !window.hasFocus()) continue;
-            if (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right
-                || event.key.code == sf::Keyboard::Space) continue;
+            if (game.getState() == GameState::Playing
+                && (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right
+                    || event.key.code == sf::Keyboard::Space)) continue;
             game.handleKey(event.key.code);
             changedState = true;
         }

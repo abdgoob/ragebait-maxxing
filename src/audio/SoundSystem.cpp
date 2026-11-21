@@ -36,7 +36,11 @@ void SoundSystem::play(SoundCue cue) {
 }
 
 void SoundSystem::toggleMute() {
-    muted_ = !muted_;
+    setMuted(!muted_);
+}
+
+void SoundSystem::setMuted(bool muted) {
+    muted_ = muted;
     if (muted_) stopAll();
 }
 

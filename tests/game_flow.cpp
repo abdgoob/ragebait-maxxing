@@ -3,9 +3,14 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 
 using namespace std;
+
+const char* kTestSave = "game_flow_test_save.txt";
+const char* kBadSave = "game_flow_bad_save.txt";
 
 void check(bool ok, const char* message) {
     if (ok) return;
@@ -74,6 +79,32 @@ void checkPatchMessages() {
     check(patches.getActiveCount() == 0 && !player.areControlsFlipped(), "clearing patches restores controls");
 }
 
+void checkProgressSave() {
+    remove(kTestSave);
+    remove(kBadSave);
+    ProgressSave fresh;
+    check(fresh.getHighestUnlocked() == 1, "fresh save unlocks chapter one");
+    check(!fresh.isMuted() && fresh.getTotalDeaths() == 0, "fresh save uses safe settings");
+    fresh.completeChapter(1, 7);
+    fresh.setMuted(true);
+    fresh.addDeath();
+    fresh.addRetry();
+    check(fresh.save(kTestSave), "progress save writes");
+    ProgressSave loaded;
+    check(loaded.load(kTestSave), "progress save reads");
+    check(loaded.getHighestUnlocked() == 2 && loaded.isCompleted(1), "chapter unlock survives reload");
+    check(loaded.getBestDeaths(1) == 7, "best deaths survives reload");
+    check(loaded.isMuted() && loaded.getTotalDeaths() == 1 && loaded.getTotalRetries() == 1,
+          "settings and totals survive reload");
+    ofstream bad(kBadSave);
+    bad << "RAGEBAIT_SAVE 99\nthis is from the future\n";
+    bad.close();
+    check(!loaded.load(kBadSave), "newer or malformed save is rejected");
+    check(loaded.getHighestUnlocked() == 1 && !loaded.isMuted(), "bad save falls back safely");
+    remove(kTestSave);
+    remove(kBadSave);
+}
+
 void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
     target.clear();
     game.draw(target);
@@ -89,17 +120,20 @@ void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
 }
 
 int main() {
+    checkProgressSave();
     checkRecording();
     checkPopup();
     checkPatchMessages();
     sf::RenderTexture target;
     check(target.create(960, 540), "real sfml render target");
-    Game game;
+    remove(kTestSave);
+    Game game("assets/", kTestSave);
     check(game.isReady(), "bundled font loads");
     check(game.getState() == GameState::Menu, "starts at menu");
     snapshot(game, target, "menu");
-    game.mousePressed(sf::Vector2f(480.f, 350.f));
+    game.mousePressed(sf::Vector2f(480.f, 255.f));
     check(game.getState() == GameState::Playing, "start button works");
+    check(game.getCurrentChapter() == 1, "fresh game starts chapter one");
     snapshot(game, target, "playing");
     game.handleKey(sf::Keyboard::Escape);
     game.update(0.05f, false, true, true);
@@ -144,6 +178,7 @@ int main() {
         snapshot(game, target, "review" + to_string(chapter));
         game.continueChapter();
         check(game.getState() == (chapter < 3 ? GameState::Playing : GameState::Victory), "only existing chapters advance");
+        check(game.getHighestUnlockedChapter() >= chapter + (chapter < 3 ? 1 : 0), "chapter completion unlocks progress");
     }
     snapshot(game, target, "build_cleared");
     game.handleKey(sf::Keyboard::Enter);
@@ -159,13 +194,14 @@ int main() {
     check(game.getState() == GameState::Victory, "boss hook opens final victory");
     snapshot(game, target, "final_victory");
     game.returnToMenu();
-    game.mousePressed(sf::Vector2f(480.f, 410.f));
+    game.mousePressed(sf::Vector2f(480.f, 430.f));
     check(game.wantsQuit(), "quit button works");
     SoundSystem sounds;
     check(!sounds.isMuted(), "sound starts enabled");
     sounds.toggleMute();
     check(sounds.isMuted(), "sound can be muted");
     sounds.play(SoundCue::Death);
+    remove(kTestSave);
     cout << "game flow checks passed\n";
     return 0;
 }

@@ -6,6 +6,7 @@
 #include "stubs/Player.h"
 #include "audio/SoundSystem.h"
 #include "game/AttemptRecorder.h"
+#include "game/ProgressSave.h"
 #include "ui/GameUI.h"
 #include "ui/PopupWindow.h"
 
@@ -21,15 +22,23 @@ enum class GameState {
     Credits
 };
 
+enum class MenuPage {
+    Main,
+    LevelSelect,
+    Settings
+};
+
 // abdullah flow and screens, world stuff stays in level and player
 
 class Game {
 public:
     Game();
     explicit Game(const string& assetFolder);
+    Game(const string& assetFolder, const string& savePath);
     ~Game();
 
     void start();
+    bool startChapter(int chapter);
     void pause();
     void resume();
     void retry();
@@ -45,6 +54,10 @@ public:
     void lostFocus();
     bool wantsQuit() const;
     bool isReady() const;
+    int getCurrentChapter() const;
+    int getHighestUnlockedChapter() const;
+    MenuPage getMenuPage() const;
+    bool isSoundMuted() const;
 
     // hooks for hussain's ghost switches and chapter 5 platforms
     void setGhostReplayEnabled(bool on);
@@ -69,6 +82,8 @@ private:
     SoundSystem sounds_;
     AttemptRecorder attempts_;
     PopupWindow popup_;
+    ProgressSave progress_;
+    string savePath_;
     bool quit_;
     bool finalVictory_;
     bool ghostReplayEnabled_;
@@ -82,12 +97,19 @@ private:
     string message_;
     string patchMessage_;
     string patchVersion_;
+    MenuPage menuPage_;
 
     void loadChapter(int n);
+    void saveProgress();
+    void toggleSound();
+    void showMenuPage(MenuPage page);
+    void handleMenuKey(sf::Keyboard::Key key);
+    void handleMenuClick(const sf::Vector2f& mouse);
     void showMessage(const string& words);
     void checkPatchMessage();
     void drawHud(sf::RenderTarget& target) const;
     void drawScreen(sf::RenderTarget& target) const;
+    void drawMenu(sf::RenderTarget& target) const;
 
     Game(const Game& other);
     Game& operator=(const Game& other);

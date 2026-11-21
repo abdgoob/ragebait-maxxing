@@ -9,6 +9,7 @@ find_package(SFML 2.5 COMPONENTS system window graphics audio REQUIRED)
 set(GAME_SOURCES
     src/game/Game.cpp
     src/game/AttemptRecorder.cpp
+    src/game/ProgressSave.cpp
     src/ui/GameUI.cpp
     src/ui/PopupWindow.cpp
     src/audio/SoundSystem.cpp

@@ -21,6 +21,7 @@ public:
     SoundSystem();
     void play(SoundCue cue);
     void toggleMute();
+    void setMuted(bool muted);
     bool isMuted() const;
     void stopAll();
 
