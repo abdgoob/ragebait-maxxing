@@ -5,6 +5,12 @@
 
 using namespace std;
 
+namespace {
+// sfml only counts a hit when boxes overlap, just touching the top edge isnt enough
+// so standing on a fake floor sinks the feet 1px in and the trap actually notices you
+const float kStandSink = 1.f;
+}
+
 Level::Level() : Level("test chunk") {}
 Level::Level(const string& name) : name_(name), trapCount_(0), baseGravity_(900.f), pitLeft_(0.f), pitRight_(0.f) {
     ground_.setSize(sf::Vector2f(960.f, 40.f));
@@ -125,7 +131,7 @@ void Level::keepOnGround(Player& player) {
         if (!over) continue;
         if (pb.top + pb.height < tb.top - 4.f) continue;
         if (pb.top + pb.height > tb.top + 16.f) continue;
-        player.landOn(tb.top);
+        player.landOn(tb.top + kStandSink);
         return;
     }
 
