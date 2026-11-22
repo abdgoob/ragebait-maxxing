@@ -34,6 +34,8 @@ set(GAME_SOURCES
     src/world/MovingPlatform.cpp
     src/world/Door.cpp
     src/world/PressureSwitch.cpp
+    src/world/Checkpoint.cpp
+    src/world/Exit.cpp
 )
 
 add_executable(ragebait_maxxing src/main.cpp ${GAME_SOURCES})
