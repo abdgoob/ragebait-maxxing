@@ -32,6 +32,8 @@ set(GAME_SOURCES
     src/levels/LevelBuilder.cpp
     src/world/Platform.cpp
     src/world/MovingPlatform.cpp
+    src/world/Door.cpp
+    src/world/PressureSwitch.cpp
 )
 
 add_executable(ragebait_maxxing src/main.cpp ${GAME_SOURCES})
