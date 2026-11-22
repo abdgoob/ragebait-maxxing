@@ -30,6 +30,8 @@ set(GAME_SOURCES
     src/patches/PatchManager.cpp
     src/developer/DeveloperDirector.cpp
     src/levels/LevelBuilder.cpp
+    src/world/Platform.cpp
+    src/world/MovingPlatform.cpp
 )
 
 add_executable(ragebait_maxxing src/main.cpp ${GAME_SOURCES})

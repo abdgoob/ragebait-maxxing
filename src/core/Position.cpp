@@ -24,6 +24,11 @@ Position& Position::operator+=(const Position& other) {
     return *this;
 }
 
+// used for how far a moving platform went this frame
+Position Position::operator-(const Position& other) const {
+    return Position(x_ - other.x_, y_ - other.y_);
+}
+
 // used for velocity * dt
 Position Position::operator*(float scale) const {
     return Position(x_ * scale, y_ * scale);
