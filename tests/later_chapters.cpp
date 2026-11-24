@@ -26,9 +26,8 @@ void checkLaterChapters(sf::RenderTexture& target) {
     game.resume();
     bool jump = false;
     for (int i = 0; i < 600 && game.getState() == GameState::Playing; ++i) {
-        const sf::FloatRect box = game.getPlayerBounds();
-        if (box.left > 395 && box.left < 420) jump = true;
-        if (box.left > 560) jump = false;
+        if (jump && game.isPlayerOnGround()) jump = false;
+        if (i == 49 || i == 87 || i == 173 || i == 238) jump = true;
         game.update(1.f / 60, false, true, jump);
     }
     check(game.getState() == GameState::ChapterClear, "real ghost holds plate while player passes door and exits");
@@ -65,6 +64,9 @@ void checkLaterChapters(sf::RenderTexture& target) {
     game.resume();
     bool right = true;
     bool fakeSeen = false;
+    int roundOneFlips = 0;
+    int roundTwoFlips = 0;
+    bool checkedReversePause = false;
     for (int i = 0; i < 2400 && game.getState() != GameState::Victory; ++i) {
         if (game.getState() == GameState::FakeVictory) {
             fakeSeen = true;
@@ -79,9 +81,25 @@ void checkLaterChapters(sf::RenderTexture& target) {
         // read the visible warning and dodge toward the room's centre
         right = game.getBossWarningX() < 450.f;
         if (i > 1200) right = true; // shutdown phase, run to the green switch
-        game.update(1.f / 60, !right, right, false);
+        const bool keyRight = right != game.areBossControlsReversed();
+        const bool reversedBefore = game.areBossControlsReversed();
+        game.update(1.f / 60, !keyRight, keyRight, false);
+        if (reversedBefore != game.areBossControlsReversed()) {
+            if (fakeSeen) ++roundTwoFlips;
+            else ++roundOneFlips;
+        }
+        if (game.areBossControlsReversed() && !checkedReversePause) {
+            game.pause();
+            checkFrozenScreen(game, target);
+            check(game.areBossControlsReversed(), "pausing freezes the boss reversal state");
+            game.resume();
+            checkedReversePause = true;
+        }
     }
     check(fakeSeen && game.getState() == GameState::Victory, "actual boss gameplay reaches fake then real victory");
+    check(roundOneFlips >= 2 && roundTwoFlips >= 6, "boss repeatedly reverses controls and escalates in round two");
+    check(!game.areBossControlsReversed(), "shutdown restores normal boss controls");
+    check(checkedReversePause, "reversed boss controls were checked during pause");
     snapshot(game, target, "boss_real_victory");
     ProgressSave reloaded;
     check(reloaded.load(save) && reloaded.isCompleted(6), "actual boss defeat saves chapter six completion");
@@ -129,4 +147,16 @@ void checkLaterWorld() {
     level.resetTraps();
     check(level.getBoss().getPhase() == 0 && !level.getBoss().isDefeated(), "retry resets the entire boss fight");
     patches.clearAll(player, level);
+    DeveloperBoss boss;
+    player.respawn(Position(100, 444));
+    bool warningSeen = false;
+    for (int i = 0; i < 170; ++i) {
+        // stand outside the previous warning lane so this checks timing, not dodging skill
+        player.setPosition(boss.getWarningX() < 450 ? 700.f : 100.f, 444);
+        boss.update(1.f / 60, player);
+        if (boss.isControlWarning()) warningSeen = true;
+    }
+    check(player.isAlive() && warningSeen && boss.areControlsReversed(), "boss warns before its first timed reversal");
+    boss.reset();
+    check(!boss.areControlsReversed() && !boss.isControlWarning(), "boss reset clears reversal and warning timers");
 }

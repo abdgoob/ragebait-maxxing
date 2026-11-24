@@ -368,7 +368,7 @@ void Level::setupTrolls(int chapter) {
         plate_ = new PressureSwitch(Position(220, 472), 70);
         door_ = new Door(Position(650, 170), 28, 310, plate_);
         door_->setColor(sf::Color(54, 111, 109));
-        addPlatform(new MovingPlatform(Position(360, 412), 80, 16, Position(50, 0), 30));
+        addPlatform(new MovingPlatform(Position(360, 412), 80, 16, Position(50, 0), 45));
     }
     const float flagX = chapter == 1 ? 560.f : (chapter == 2 ? 590.f : 640.f);
     if (chapter <= 3) checkpoint_ = new Checkpoint(Position(flagX, 424.f), chapter == 2);

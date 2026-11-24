@@ -60,7 +60,9 @@ public:
     bool isReady() const;
     int getCurrentChapter() const;
     sf::FloatRect getPlayerBounds() const;
+    bool isPlayerOnGround() const;
     float getBossWarningX() const;
+    bool areBossControlsReversed() const;
     int getHighestUnlockedChapter() const;
     MenuPage getMenuPage() const;
     bool isSoundMuted() const;

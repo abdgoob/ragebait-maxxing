@@ -223,7 +223,9 @@ bool Game::wantsQuit() const { return quit_; }
 bool Game::isReady() const { return ui_.isReady(); }
 int Game::getCurrentChapter() const { return chapter_; }
 sf::FloatRect Game::getPlayerBounds() const { return player_.getBounds(); }
+bool Game::isPlayerOnGround() const { return player_.isOnGround(); }
 float Game::getBossWarningX() const { return level_.getBoss().getWarningX(); }
+bool Game::areBossControlsReversed() const { return chapter_ == 6 && level_.getBoss().areControlsReversed(); }
 int Game::getHighestUnlockedChapter() const { return progress_.getHighestUnlocked(); }
 MenuPage Game::getMenuPage() const { return menuPage_; }
 bool Game::isSoundMuted() const { return sounds_.isMuted(); }
@@ -332,7 +334,8 @@ void Game::checkPatchMessage() {
     shownPatch_ = count;
     // short gameplay hint, version numbers and patch notes stay out of the player's way
     patchMessage_.clear();
-    if (player_.areControlsFlipped()) patchMessage_ = "left and right are swapped";
+    if (player_.areControlsFlipped() != areBossControlsReversed())
+        patchMessage_ = "left and right are swapped";
     if (level_.getBaseGravity() != 900.f) {
         if (!patchMessage_.empty()) patchMessage_ += " / ";
         patchMessage_ += "gravity changed";
@@ -356,6 +359,12 @@ void Game::update(float dt, bool left, bool right, bool jump) {
         if (attempts_.hasGhost()) ghost_.setPosition(attempts_.getGhostPosition());
     }
     const float oldYVelocity = player_.getVelocity().getY();
+    // boss swaps both keyboard layouts here; ordinary control patches still work too
+    if (areBossControlsReversed()) {
+        const bool oldLeft = left;
+        left = right;
+        right = oldLeft;
+    }
     player_.handleInput(left, right, jump);
     level_.setInteractionBounds(hasGhost(), getGhostBounds(), hasPopupPlatform(), getPopupPlatformBounds());
     level_.update(dt, player_, dev_, patches_);
@@ -547,6 +556,11 @@ void Game::draw(sf::RenderTarget& target) const {
             ui_.text(target, boss.isReadyForShutdown() ? "shutdown unlocked ->" :
                 (boss.getPhase() == 0 ? "dev round 1: dodge the marked lanes" : "dev round 2: faster lanes. keep moving."),
                 290, 310, 13);
+            if (boss.isControlWarning())
+                ui_.centeredText(target, "controls swapping...", 480, 340, 14, sf::Color(255, 195, 110));
+            // two reversals cancel, so show the mapping the player actually gets
+            else if (boss.areControlsReversed() != player_.areControlsFlipped())
+                ui_.centeredText(target, "left / right reversed", 480, 340, 14, sf::Color(245, 155, 139));
         } else if (!level_.hasBetrayed()) {
             ui_.text(target, chapter_ == 2 ? "save + shortcut ->" : "totally safe ->", 532.f, 402.f, 11,
                      sf::Color(185, 205, 190));

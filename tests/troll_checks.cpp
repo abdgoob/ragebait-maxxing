@@ -9,8 +9,8 @@ void check(bool ok, const char* message);
 
 void checkPlayableRoutes() {
     // recorded key presses through the actual layouts, no teleporting in this check
-    const int jumpFrames[3][5] = { {35, 96, 150, -1, -1}, {24, 87, 153, 208, -1}, {56, 132, 212, 276, 335} };
-    const int waits[3] = {0, 0, 115}; // chapter 3 needs a different moving-spike phase
+    const int jumpFrames[3][5] = { {36, 103, 167, -1, -1}, {34, 91, 166, -1, -1}, {4, 91, 160, 242, -1} };
+    const int waits[3] = {0, 0, 83}; // chapter 3 needs a different moving-spike phase
     for (int chapter = 1; chapter <= 3; ++chapter) {
         Level level;
         Player player(Position(80, 444));

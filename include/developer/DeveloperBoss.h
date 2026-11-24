@@ -14,6 +14,8 @@ public:
     bool isDefeated() const;
     int getPhase() const;
     float getWarningX() const;
+    bool areControlsReversed() const;
+    bool isControlWarning() const;
 private:
     int phase_;
     float roundTime_;
@@ -21,4 +23,6 @@ private:
     float warningX_;
     bool fakeWin_;
     bool defeated_;
+    float controlTimer_;
+    bool controlsReversed_;
 };

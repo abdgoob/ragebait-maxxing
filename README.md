@@ -17,6 +17,8 @@ there are image textures now too, plus real and fake checkpoints and exits in th
 - chapter 5 / accept all cookies: drag the popup title bar over the wide gap and drop it near floor height. its top becomes a real platform. jump onto it, then jump to the far bank. closing the window removes the bridge; r brings it back.
 - chapter 6 / the final hotfix: dodge marked lanes for the first round. the victory screen lies. accept it and survive the faster second round, then touch the green shutdown switch on the right for the real ending.
 
+the difficulty pass speeds up the moving spikes in chapters 1-4, speeds up the chapter 4 platform and makes chapter 5's landing spike move. chapter 6 now swaps left/right every 2.8 seconds in round one and every 1.8 seconds in round two. a short warning appears before each swap, and reversed controls stay labelled until the next swap. both keyboard layouts follow the same rules.
+
 betrayals reset on retry. real checkpoint spawns last for the current chapter/run only; the save file still stores chapter progression, not mid-level positions. the fake flag never modifies either save data or the real spawn.
 
 ## controls
@@ -63,7 +65,7 @@ cmake copies the assets folder beside the executable. `ragebait_save.txt` is als
 
 level owns a switch, linked door and up to eight platforms using normal pointers and a fixed array. the player can land on and ride moving platforms. the popup uses one-way top collision so dragging it never pushes the player through walls. ghost and popup state clear on chapter changes. retries close the door, rewind the ghost, restore the popup and reset the boss.
 
-DeveloperBoss uses two phase timers, one telegraphed attack lane, and one shutdown trigger. warning lanes lock onto your old position, so move away instead of standing still. attacks only run while playing. the fake celebration freezes the same fight and the real win saves chapter 6 before credits.
+DeveloperBoss uses two phase timers, one telegraphed attack lane, and one shutdown trigger. round one lasts eight seconds and round two twelve. warning lanes lock onto your old position, so move away instead of standing still. the harder fight uses wider lanes and shorter warnings. its separate control-swap timer only advances while playing, freezes during pause/fake victory, and resets on retry. shutdown removes the boss reversal so the final switch stays reachable. ordinary control patches still apply through Player as before. the real win saves chapter 6 before credits.
 
 ## art and viva notes
 
