@@ -34,6 +34,7 @@ void Exit::update(float dt) {
 
 void Exit::draw(sf::RenderTarget& target) const {
     if (!enabled_ || used_) return;
+    if (assets_ && assets_->draw(target, Art::Exit, getBounds())) return;
     target.draw(frame_);
     target.draw(door_);
 }

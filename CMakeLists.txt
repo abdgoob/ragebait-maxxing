@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(SFML 2.5 COMPONENTS system window graphics audio REQUIRED)
 
 set(GAME_SOURCES
+    src/core/AssetManager.cpp
     src/game/Game.cpp
     src/game/AttemptRecorder.cpp
     src/game/ProgressSave.cpp

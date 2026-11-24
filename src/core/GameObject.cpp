@@ -18,6 +18,8 @@ GameObject::~GameObject() {
     --objectCount_;
 }
 
+void GameObject::setAssets(const AssetManager* assets) { assets_ = assets; }
+
 void GameObject::setPosition(const Position& pos) { pos_ = pos; }
 
 void GameObject::setPosition(float x, float y) {

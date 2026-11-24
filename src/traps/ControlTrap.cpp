@@ -29,6 +29,9 @@ void ControlTrap::onPlayerTouch(Player& player) {
 }
 
 void ControlTrap::draw(sf::RenderTarget& target) const {
+    if (!active_) return;
+    const sf::Color tint = alreadyHit_ ? sf::Color(130, 130, 130) : sf::Color::White;
+    if (assets_ && assets_->draw(target, Art::Control, getBounds(), tint)) return;
     if (active_) target.draw(shape_);
 }
 

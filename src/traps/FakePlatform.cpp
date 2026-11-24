@@ -11,10 +11,8 @@ FakePlatform::FakePlatform(const Position& pos, float width, float height)
       fallen_(false),
       fallTimer_(0.f) {
     shape_.setSize(sf::Vector2f(w_, h_));
-    // same-ish as the real ground so it looks legit
-    shape_.setFillColor(sf::Color(72, 72, 82));
-    shape_.setOutlineColor(sf::Color(95, 95, 108));
-    shape_.setOutlineThickness(1.f);
+    // same colour as level's ground, no cracks or glowing edge giving the joke away
+    shape_.setFillColor(sf::Color(60, 60, 70));
     shape_.setPosition(pos_.getX(), pos_.getY());
 }
 
@@ -47,7 +45,11 @@ void FakePlatform::update(float dt) {
 }
 
 void FakePlatform::draw(sf::RenderTarget& target) const {
-    if (!fallen_ || fallTimer_ > 0.f) target.draw(shape_);
+    if (fallen_ && fallTimer_ <= 0.f) return;
+    // floor lids cover the full visible ground depth; the hitbox stays the same
+    sf::RectangleShape floor = shape_;
+    if (startY_ == 480.f) floor.setSize(sf::Vector2f(w_, 40.f));
+    target.draw(floor);
 }
 
 void FakePlatform::reset() {

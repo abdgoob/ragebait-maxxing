@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Position.h"
+#include "core/AssetManager.h"
 #include <SFML/Graphics.hpp>
 #include <string>
 
@@ -22,11 +23,13 @@ public:
     void setPosition(float x, float y);
 
     int getId() const;
+    void setAssets(const AssetManager* assets);
     const string& getTag() const;
 
     static int getTotalObjects();
 
 protected:
+    const AssetManager* assets_ = 0;
     Position pos_;
     string tag_;
     int id_;

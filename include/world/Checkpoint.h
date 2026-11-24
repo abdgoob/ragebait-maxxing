@@ -20,6 +20,7 @@ public:
     bool isFake() const;
     bool isReached() const;
     void markReached();
+    void reset();
     // where the floor is under the flag, the player respawns standing here
     float getFloorY() const;
 

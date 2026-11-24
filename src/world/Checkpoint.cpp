@@ -37,6 +37,8 @@ void Checkpoint::update(float dt) {
 }
 
 void Checkpoint::draw(sf::RenderTarget& target) const {
+    if (assets_ && assets_->draw(target, Art::Checkpoint, getBounds(),
+        reached_ ? sf::Color(140, 255, 180) : sf::Color::White)) return;
     target.draw(pole_);
     target.draw(flag_);
 }
@@ -45,6 +47,7 @@ bool Checkpoint::touches(const sf::FloatRect& box) const { return getBounds().in
 
 bool Checkpoint::isFake() const { return fake_; }
 bool Checkpoint::isReached() const { return reached_; }
+void Checkpoint::reset() { reached_ = false; glow_ = 0.f; update(0.f); }
 
 void Checkpoint::markReached() {
     reached_ = true;

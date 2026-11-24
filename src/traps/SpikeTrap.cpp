@@ -33,6 +33,7 @@ void SpikeTrap::update(float dt) {
 
 void SpikeTrap::draw(sf::RenderTarget& target) const {
     if (!active_) return;
+    if (assets_ && assets_->draw(target, Art::Spike, getBounds())) return;
 
     // little triangles so it reads as spikes not a red bar
     const float w = 56.f;

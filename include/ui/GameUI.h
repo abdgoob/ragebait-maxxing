@@ -21,6 +21,11 @@ public:
                 float w, float h) const;
     void shade(sf::RenderTarget& target) const;
     void monitor(sf::RenderTarget& target, float x, float y, bool annoyed) const;
+    void centeredText(sf::RenderTarget& target, const string& words, float x, float y,
+                      unsigned int size, const sf::Color& color) const;
+    void menuBackdrop(sf::RenderTarget& target) const;
+    void menuButton(sf::RenderTarget& target, const string& words, const string& key,
+                    float x, float y, float w, float h, bool primary = false) const;
 
 private:
     sf::Font font_;

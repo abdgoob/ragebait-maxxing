@@ -105,6 +105,7 @@ void Player::update(float dt) {
 
 void Player::draw(sf::RenderTarget& target) const {
     if (!alive_) return;
+    if (assets_ && assets_->draw(target, Art::Player, getBounds())) return;
     target.draw(body_);
 }
 

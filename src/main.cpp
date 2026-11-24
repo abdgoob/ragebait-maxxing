@@ -57,16 +57,21 @@ int main(int argc, char* argv[]) {
             if (event.type != sf::Event::KeyPressed || !window.hasFocus()) continue;
             if (game.getState() == GameState::Playing
                 && (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right
-                    || event.key.code == sf::Keyboard::Space)) continue;
+                    || event.key.code == sf::Keyboard::Space || event.key.code == sf::Keyboard::A
+                    || event.key.code == sf::Keyboard::D || event.key.code == sf::Keyboard::W)) continue;
             game.handleKey(event.key.code);
             changedState = true;
         }
         if (game.wantsQuit()) window.close();
         if (!window.isOpen()) break;
         if (!changedState && window.hasFocus()) {
-            bool left = sf::Keyboard::isKeyPressed(sf::Keyboard::Left);
-            bool right = sf::Keyboard::isKeyPressed(sf::Keyboard::Right);
-            bool jump = sf::Keyboard::isKeyPressed(sf::Keyboard::Space);
+            // both layouts feed the same movement code, including flipped-control patches
+            bool left = sf::Keyboard::isKeyPressed(sf::Keyboard::Left)
+                || sf::Keyboard::isKeyPressed(sf::Keyboard::A);
+            bool right = sf::Keyboard::isKeyPressed(sf::Keyboard::Right)
+                || sf::Keyboard::isKeyPressed(sf::Keyboard::D);
+            bool jump = sf::Keyboard::isKeyPressed(sf::Keyboard::Space)
+                || sf::Keyboard::isKeyPressed(sf::Keyboard::W);
             game.update(dt, left, right, jump);
         }
         window.clear(sf::Color(25, 22, 35));
