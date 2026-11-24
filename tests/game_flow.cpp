@@ -9,6 +9,11 @@
 
 using namespace std;
 
+void checkTrolls();
+void checkTextures(sf::RenderTexture& target);
+void checkLaterChapters(sf::RenderTexture& target);
+void checkLaterWorld();
+
 const char* kTestSave = "game_flow_test_save.txt";
 const char* kBadSave = "game_flow_bad_save.txt";
 
@@ -141,6 +146,8 @@ void checkFrozenScreen(Game& game, sf::RenderTexture& target) {
 }
 
 int main() {
+    checkLaterWorld();
+    checkTrolls();
     checkProgressSave();
     checkRecording();
     checkGhostReplay();
@@ -148,6 +155,8 @@ int main() {
     checkPatchMessages();
     sf::RenderTexture target;
     check(target.create(960, 540), "real sfml render target");
+    checkTextures(target);
+    checkLaterChapters(target);
     remove(kTestSave);
     Game game("assets/", kTestSave);
     check(game.isReady(), "bundled font loads");
@@ -213,24 +222,25 @@ int main() {
     snapshot(game, target, "popup_hook");
     game.showFakeVictory();
     check(game.getState() == GameState::FakeVictory, "fake victory has its own frozen screen");
+    checkFrozenScreen(game, target);
     snapshot(game, target, "fake_victory");
     game.handleKey(sf::Keyboard::Enter);
     check(game.getState() == GameState::Playing, "accepting fake victory returns to the same attempt");
     check(game.hasPopupPlatform(), "fake victory keeps the current interaction state");
-    for (int chapter = 1; chapter <= 3; ++chapter) {
+    for (int chapter = 1; chapter <= 6; ++chapter) {
         game.completeChapter();
         check(game.getState() == GameState::ChapterClear, "exit hook opens chapter review");
         game.update(0.05f, false, false, false);
         snapshot(game, target, "review" + to_string(chapter));
         game.continueChapter();
-        check(game.getState() == (chapter < 3 ? GameState::Playing : GameState::Victory), "only existing chapters advance");
-        check(game.getHighestUnlockedChapter() >= chapter + (chapter < 3 ? 1 : 0), "chapter completion unlocks progress");
+        check(game.getState() == (chapter < 6 ? GameState::Playing : GameState::Victory), "six chapters advance to final results");
+        check(game.getHighestUnlockedChapter() >= chapter + (chapter < 6 ? 1 : 0), "chapter completion unlocks progress");
     }
     snapshot(game, target, "build_cleared");
     game.handleKey(sf::Keyboard::Enter);
     check(game.getState() == GameState::Credits, "credits follow completion");
     snapshot(game, target, "credits");
-    check(game.getRunSummary().getChaptersCleared() == 3, "run summary counts cleared chapters");
+    check(game.getRunSummary().getChaptersCleared() == 6, "run summary counts all six cleared chapters");
     game.handleKey(sf::Keyboard::Escape);
     check(game.getState() == GameState::Victory, "credits returns to results");
     game.returnToMenu();
@@ -244,7 +254,7 @@ int main() {
     snapshot(game, target, "final_victory");
     game.returnToMenu();
     Game reloaded("assets/", kTestSave);
-    check(reloaded.getHighestUnlockedChapter() >= 3, "unlocked chapters survive restart");
+    check(reloaded.getHighestUnlockedChapter() == 6, "all six unlocked chapters survive restart");
     check(reloaded.startChapter(3), "reloaded level select can start an unlocked existing chapter");
     game.mousePressed(sf::Vector2f(480.f, 430.f));
     check(game.wantsQuit(), "quit button works");

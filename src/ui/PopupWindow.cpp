@@ -55,7 +55,7 @@ void PopupWindow::move(const sf::Vector2f& mouse) {
     if (position_.x < 0.f) position_.x = 0.f;
     if (position_.x > 640.f) position_.x = 640.f;
     if (position_.y < 170.f) position_.y = 170.f;
-    if (position_.y > 394.f) position_.y = 394.f;
+    if (position_.y > 420.f) position_.y = 420.f;
 }
 
 void PopupWindow::release() {
@@ -65,12 +65,14 @@ void PopupWindow::release() {
 
 void PopupWindow::draw(sf::RenderTarget& target, const GameUI& ui) const {
     if (!enabled_ || !open_) return;
-    ui.box(target, position_.x, position_.y, 320.f, 146.f, sf::Color(225, 218, 238));
+    // a placed window folds into its title bar, so a low bridge doesnt cover the hud
+    ui.box(target, position_.x, position_.y, 320.f, placed_ ? 38.f : 146.f, sf::Color(225, 218, 238));
     ui.box(target, position_.x, position_.y, 320.f, 38.f, sf::Color(100, 65, 150));
     ui.text(target, "experience update", position_.x + 48.f, position_.y + 10.f, 14);
     const sf::FloatRect close = closeBounds();
     ui.box(target, close.left, close.top, close.width, close.height, sf::Color(190, 60, 95));
     ui.text(target, "x", close.left + 10.f, close.top + 2.f, 16);
+    if (placed_) return;
     ui.text(target, "YOUR EXPERIENCE MATTERS", position_.x + 16.f, position_.y + 54.f,
             17, sf::Color(35, 25, 50));
     ui.text(target, closeDodges_ > 0 ? "close button working as intended" : "drag the title bar. trust us.",

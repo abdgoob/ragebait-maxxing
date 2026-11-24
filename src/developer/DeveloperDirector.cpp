@@ -35,12 +35,30 @@ void DeveloperDirector::onPlayerDeath(Player& player, const Trap* trap) {
 void DeveloperDirector::onLevelStart(const Level& level) {
     deathsThisLevel_ = 0;
     lastTaunt_ = "welcome to " + level.getName() + " (no refunds)";
+    if (level.getName() == "04 unpaid intern") lastTaunt_ = "need help? record yourself on the plate, then retry.";
+    if (level.getName() == "05 accept all cookies") lastTaunt_ = "that popup is load bearing. drag it over the gap.";
+    if (level.getName() == "06 the final hotfix") lastTaunt_ = "i marked where im about to delete you. move.";
     mood_ = 3;
 }
 
 void DeveloperDirector::onRetry(Player& player) {
     player.respawn();
-    lastTaunt_ = "respawned. try not to embarrass us both";
+    const char* retries[3] = { "same plan again? bold research method.",
+        "your last attempt is now a cautionary tale.", "respawned. the floor has requested a rematch." };
+    lastTaunt_ = retries[deathsThisLevel_ % 3];
+}
+
+void DeveloperDirector::onFakeCheckpoint() {
+    lastTaunt_ = "progress saved*  *in my imagination. skill issue.";
+}
+
+void DeveloperDirector::onFakeExit(int chapter) {
+    if (chapter == 1) lastTaunt_ = "congrats! your floor subscription just expired. jump.";
+    else if (chapter == 2) lastTaunt_ = "wrong door. spikes installed. this is clearly your fault.";
+    else if (chapter == 3) lastTaunt_ = "victory rolled back. left is right. thanks for beta testing.";
+    else if (chapter == 4) lastTaunt_ = "your ghost did the work. i moved the exit anyway.";
+    else lastTaunt_ = "thanks for accepting the cookies. actual door is further right.";
+    mood_ = 5;
 }
 
 string DeveloperDirector::getLastTaunt() const { return lastTaunt_; }
@@ -68,7 +86,7 @@ void DeveloperDirector::maybeDropPatch(Player& player, Level& level, PatchManage
 string DeveloperDirector::pickTaunt(TrapKind kind) const {
     switch (kind) {
         case TrapKind::Spike:
-            return "did the moving spike look friendly?";
+            return "the spikes filed a complaint. stop landing on them.";
         case TrapKind::FakePlatform:
             return "that floor was load bearing apparently";
         case TrapKind::ControlSwap:

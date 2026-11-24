@@ -27,6 +27,8 @@ void PatchManager::freeActive() {
 }
 
 void PatchManager::queuePatch(PatchEffect* patch) {
+    if (pending_ == patch) return;
+    delete pending_; // one pending slot, replacing it shouldnt leak the old patch
     pending_ = patch;
 }
 
@@ -53,7 +55,9 @@ void PatchManager::update(float dt, Player& player, Level& level) {
     if (patchTimer_ > 0.f) {
         patchTimer_ -= dt;
         if (patchTimer_ <= 0.f) {
-            for (int i = 0; i < activeCount_; ++i) {
+            // undo in reverse order, like taking plates off a stack
+            // otherwise two control patches can leave controls flipped forever
+            for (int i = activeCount_ - 1; i >= 0; --i) {
                 if (active_[i] && active_[i]->isActive()) {
                     active_[i]->revert(player, level);
                 }
@@ -78,7 +82,7 @@ int PatchManager::getActiveCount() const { return activeCount_; }
 float PatchManager::getRemainingTime() const { return patchTimer_ > 0.f ? patchTimer_ : 0.f; }
 
 void PatchManager::clearAll(Player& player, Level& level) {
-    for (int i = 0; i < activeCount_; ++i) {
+    for (int i = activeCount_ - 1; i >= 0; --i) {
         if (active_[i]) {
             active_[i]->revert(player, level);
             delete active_[i];

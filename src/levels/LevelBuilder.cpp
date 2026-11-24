@@ -12,6 +12,9 @@ const char* LevelBuilder::chapterName(int chapter) {
     if (chapter == 1) return "01 everything is fine";
     if (chapter == 2) return "02 skill issue";
     if (chapter == 3) return "03 patch hell";
+    if (chapter == 4) return "04 unpaid intern";
+    if (chapter == 5) return "05 accept all cookies";
+    if (chapter == 6) return "06 the final hotfix";
     return "test pit";
 }
 
@@ -22,13 +25,25 @@ void LevelBuilder::fillChapter(Level& level, int chapter) {
 
     if (chapter == 2) chapterTwo(level);
     else if (chapter == 3) chapterThree(level);
-    else chapterOne(level);
+    else if (chapter == 1) chapterOne(level);
+    else if (chapter == 4) {
+        level.addTrap(TrapFactory::makeSpike(Position(470.f, kSpikeY), 25.f, 2.f));
+    } else if (chapter == 5) {
+        // too wide for one jump: the annoying popup is the bridge
+        level.setPit(340.f, 700.f);
+        level.addTrap(TrapFactory::makeSpike(Position(750.f, kSpikeY), 0.f, 0.f));
+    }
+    level.setupTrolls(chapter);
 }
 
 void LevelBuilder::chapterOne(Level& level) {
-    // tutorial vibe: empty walk then a floor that is lying
-    level.addTrap(TrapFactory::makeFakeFloor(Position(300.f, 390.f), 130.f, 18.f));
-    level.addTrap(TrapFactory::makeSpike(Position(320.f, kSpikeY), 0.f, 0.f));
+    // looks like one flat path, but this section is only a lid over a real pit
+    // walking onto it drops you; learning where to jump is the actual puzzle
+    level.setPit(300.f, 430.f);
+    level.addTrap(TrapFactory::makeFakeFloor(Position(300.f, kFakeY), 130.f, 24.f));
+    // dont put the spike under an optional floating block: bait the rushed landing instead
+    // there is solid ground between the pit and spike so a careful second jump works
+    level.addTrap(TrapFactory::makeSpike(Position(490.f, kSpikeY), 0.f, 0.f));
     level.addTrap(TrapFactory::makeSpike(Position(700.f, kSpikeY), 40.f, 2.2f));
 }
 

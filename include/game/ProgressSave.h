@@ -4,7 +4,7 @@
 
 using namespace std;
 
-// small text save, six slots even while only three chapters exist
+// small text save, one slot for each of the six chapters
 class ProgressSave {
 public:
     static const int MAX_CHAPTERS = 6;

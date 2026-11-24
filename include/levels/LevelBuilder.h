@@ -4,7 +4,7 @@
 
 using namespace std;
 
-// arsalan layouts for chapters 1-3, hussain can swap in real exits later
+// six basic layouts, world objects and exits are connected by level
 // numbers are just screen coords, ground top is 480
 
 class LevelBuilder {

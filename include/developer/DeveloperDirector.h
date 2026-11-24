@@ -20,6 +20,8 @@ public:
     void onPlayerDeath(Player& player, const Trap* trap);
     void onLevelStart(const Level& level);
     void onRetry(Player& player);
+    void onFakeCheckpoint();
+    void onFakeExit(int chapter);
 
     string getLastTaunt() const;
     string getLastPatchReason() const;

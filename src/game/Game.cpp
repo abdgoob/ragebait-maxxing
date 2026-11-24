@@ -9,12 +9,14 @@ Game::Game() : Game("assets/", "ragebait_save.txt") {}
 Game::Game(const string& assetFolder) : Game(assetFolder, "ragebait_save.txt") {}
 
 Game::Game(const string& assetFolder, const string& savePath)
-    : player_(Position(80.f, 444.f)), level_("01 everything is fine"),
+    : assets_(assetFolder), player_(Position(80.f, 444.f)), level_("01 everything is fine"),
       state_(GameState::Menu), chapter_(1), ui_(assetFolder), savePath_(savePath), quit_(false),
       finalVictory_(false), ghostReplayEnabled_(false), interfacePopupEnabled_(false),
       shownPatch_(0), messageTimer_(0.f), patchPopupTimer_(0.f), stateTimer_(0.f),
       menuPage_(MenuPage::Main) {
     progress_.load(savePath_);
+    player_.setAssets(&assets_);
+    level_.setAssets(&assets_);
     sounds_.setMuted(progress_.isMuted());
     loadChapter(1);
 }
@@ -23,7 +25,7 @@ Game::~Game() { patches_.clearAll(player_, level_); }
 
 void Game::loadChapter(int n) {
     if (n < 1) n = 1;
-    if (n > 3) n = 3;
+    if (n > 6) n = 6;
     chapter_ = n;
     patches_.clearAll(player_, level_);
     level_.setBaseGravity(900.f);
@@ -44,6 +46,8 @@ void Game::loadChapter(int n) {
     interfacePopupEnabled_ = false;
     ghost_.reset();
     popup_.setEnabled(false);
+    if (chapter_ == 4) enableGhostReplay();
+    if (chapter_ == 5) enableInterfacePopup();
     showMessage(dev_.getLastTaunt());
 }
 
@@ -56,13 +60,13 @@ void Game::showMessage(const string& words) {
 void Game::start() {
     if (state_ != GameState::Menu) return;
     int chapter = progress_.getHighestUnlocked();
-    if (chapter > 3) chapter = 3;
+    if (chapter > 6) chapter = 6;
     startChapter(chapter);
 }
 
 bool Game::startChapter(int chapter) {
     if (state_ != GameState::Menu) return false;
-    if (chapter < 1 || chapter > 3 || !progress_.isUnlocked(chapter)) return false;
+    if (chapter < 1 || chapter > 6 || !progress_.isUnlocked(chapter)) return false;
     patches_.clearAll(player_, level_);
     // a new run really is fresh, retries still keep the deaths
     player_ = Player(Position(80.f, 444.f));
@@ -138,13 +142,12 @@ void Game::continueChapter() {
     summary_.addChapterClear();
     saveProgress();
     sounds_.play(SoundCue::Save);
-    if (chapter_ < 3) {
+    if (chapter_ < 6) {
         loadChapter(chapter_ + 1);
         state_ = GameState::Playing;
         sounds_.play(SoundCue::Chapter);
     } else {
-        // these are the three layouts in this build, the boss calls win later
-        finalVictory_ = false;
+        finalVictory_ = true;
         state_ = GameState::Victory;
         sounds_.play(SoundCue::Victory);
     }
@@ -152,6 +155,11 @@ void Game::continueChapter() {
 
 void Game::win() {
     if (state_ != GameState::Playing) return;
+    if (chapter_ == 6) {
+        progress_.completeChapter(6, summary_.getChapterDeaths());
+        summary_.addChapterClear();
+        saveProgress();
+    }
     finalVictory_ = true;
     state_ = GameState::Victory;
     popup_.release();
@@ -214,6 +222,8 @@ void Game::lostFocus() { mouseReleased(); pause(); }
 bool Game::wantsQuit() const { return quit_; }
 bool Game::isReady() const { return ui_.isReady(); }
 int Game::getCurrentChapter() const { return chapter_; }
+sf::FloatRect Game::getPlayerBounds() const { return player_.getBounds(); }
+float Game::getBossWarningX() const { return level_.getBoss().getWarningX(); }
 int Game::getHighestUnlockedChapter() const { return progress_.getHighestUnlocked(); }
 MenuPage Game::getMenuPage() const { return menuPage_; }
 bool Game::isSoundMuted() const { return sounds_.isMuted(); }
@@ -320,9 +330,14 @@ void Game::checkPatchMessage() {
     const int count = patches_.getAnnouncementCount();
     if (count == shownPatch_) return;
     shownPatch_ = count;
-    patchMessage_ = patches_.getLastAnnouncement();
-    patchVersion_ = patches_.getLastVersion();
-    patchPopupTimer_ = 5.f;
+    // short gameplay hint, version numbers and patch notes stay out of the player's way
+    patchMessage_.clear();
+    if (player_.areControlsFlipped()) patchMessage_ = "left and right are swapped";
+    if (level_.getBaseGravity() != 900.f) {
+        if (!patchMessage_.empty()) patchMessage_ += " / ";
+        patchMessage_ += "gravity changed";
+    }
+    patchPopupTimer_ = 3.f;
     sounds_.play(SoundCue::Patch);
 }
 
@@ -342,6 +357,7 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     }
     const float oldYVelocity = player_.getVelocity().getY();
     player_.handleInput(left, right, jump);
+    level_.setInteractionBounds(hasGhost(), getGhostBounds(), hasPopupPlatform(), getPopupPlatformBounds());
     level_.update(dt, player_, dev_, patches_);
     if (ghostReplayEnabled_) attempts_.record(dt, player_.getPosition());
     checkPatchMessage();
@@ -357,8 +373,19 @@ void Game::update(float dt, bool left, bool right, bool jump) {
     }
     if (oldYVelocity >= 0.f && player_.getVelocity().getY() < 0.f) sounds_.play(SoundCue::Jump);
 
-    // temp until hussain puts a real exit in, his exit can call completeChapter
-    if (player_.getPosition().getX() > 910.f) completeChapter();
+    const LevelEvent event = level_.takeEvent();
+    if (event == LevelEvent::Checkpoint) {
+        showMessage("checkpoint saved. this one actually works.");
+        sounds_.play(SoundCue::Save);
+    } else if (event == LevelEvent::FakeCheckpoint || event == LevelEvent::FakeExit) {
+        showMessage(dev_.getLastTaunt());
+        sounds_.play(SoundCue::FakeWin);
+        if (event == LevelEvent::FakeExit && chapter_ == 3) showFakeVictory();
+    } else if (event == LevelEvent::RealExit) completeChapter();
+    else if (event == LevelEvent::BossFakeWin) {
+        showMessage("nice win. anyway, phase two. your warranty is void.");
+        showFakeVictory();
+    } else if (event == LevelEvent::BossWin) win();
 }
 
 void Game::drawHud(sf::RenderTarget& target) const {
@@ -366,140 +393,168 @@ void Game::drawHud(sf::RenderTarget& target) const {
     ui_.text(target, level_.getName(), 24.f, 12.f, 20, sf::Color(210, 185, 255));
     ui_.text(target, "deaths: " + to_string(player_.getDeathCount()), 630.f, 15.f, 18);
     ui_.text(target, sounds_.isMuted() ? "s: sound off" : "s: sound on", 790.f, 18.f, 13);
-    string rules = player_.areControlsFlipped() ? "controls: reversed" : "controls: normal";
-    rules += "   gravity: " + to_string(static_cast<int>(level_.getBaseGravity()));
-    if (patches_.getActiveCount() > 0) {
-        const int seconds = static_cast<int>(patches_.getRemainingTime() + 0.999f);
-        rules += "   patches: " + to_string(patches_.getActiveCount()) + " / " + to_string(seconds) + "s";
+    if (state_ == GameState::Playing && patchPopupTimer_ > 0.f
+        && patches_.getActiveCount() > 0 && !patchMessage_.empty()) {
+        ui_.text(target, patchMessage_, 24.f, 70.f, 14, sf::Color(225, 195, 230));
     }
-    ui_.text(target, rules, 24.f, 70.f, 14, sf::Color(190, 185, 205));
     if (messageTimer_ > 0.f || state_ == GameState::Dead) {
         ui_.box(target, 24.f, 103.f, 912.f, 64.f, sf::Color(38, 29, 53, 235));
         ui_.monitor(target, 36.f, 114.f, dev_.getMood() >= 4);
         ui_.text(target, "dev: " + message_, 100.f, 122.f, 15);
     }
-    if (patchPopupTimer_ > 0.f || (state_ == GameState::Dead && patches_.getActiveCount() > 0)) {
-        const float slide = patchPopupTimer_ > 4.8f ? (patchPopupTimer_ - 4.8f) * 100.f : 0.f;
-        ui_.box(target, 24.f, 181.f + slide, 912.f, 68.f, sf::Color(84, 43, 111, 245));
-        ui_.text(target, "update installed / " + patchVersion_, 38.f, 189.f + slide, 16,
-                 sf::Color(240, 190, 255));
-        ui_.text(target, patchMessage_, 38.f, 218.f + slide, 14);
-    }
-    ui_.text(target, "arrows move   space jump   esc pause   r retry   m menu", 24.f, 520.f, 13,
+    ui_.text(target, "arrows / a d move   space / w jump   esc pause   r retry   m menu", 24.f, 520.f, 13,
              sf::Color(175, 165, 195));
 }
 
 void Game::drawScreen(sf::RenderTarget& target) const {
-    ui_.shade(target);
+    // every menu screen gets the same landscape, not a dim copy of gameplay
+    ui_.menuBackdrop(target);
     if (state_ == GameState::Menu) {
         drawMenu(target);
         return;
     }
-    ui_.monitor(target, 456.f, 52.f, state_ == GameState::Dead);
+    const sf::Color accent = state_ == GameState::Dead ? sf::Color(245, 155, 139) : sf::Color(103, 234, 194);
+    ui_.text(target, "RB / MAXXING", 26, 22, 12, sf::Color(112, 178, 180));
+    ui_.text(target, "TRUST NOTHING. RETRY EVERYTHING.", 700, 22, 11, sf::Color(112, 178, 180));
+    // a solid inset panel keeps scenery out of the words
+    ui_.box(target, 184, 67, 592, 247, sf::Color(7, 17, 30));
+    ui_.box(target, 180, 63, 592, 247, sf::Color(27, 46, 62));
+    ui_.box(target, 184, 67, 584, 239, sf::Color(13, 28, 44));
+    ui_.box(target, 184, 67, 584, 3, accent);
+    ui_.centeredText(target, level_.getName(), 480, 86, 12, sf::Color(140, 170, 185));
     string title;
     string line;
     string detail;
     string first;
-    string second = "m / back to menu";
+    string second = "MAIN MENU";
     if (state_ == GameState::Paused) {
-        title = "taking a break?";
+        title = "PAUSED";
         line = "fine. the traps can wait.";
-        detail = "game and patch timers are paused";
-        first = "enter / keep going";
+        detail = "take a breath. the traps can wait.";
+        first = "KEEP GOING";
     } else if (state_ == GameState::Dead) {
-        title = "you died. again.";
+        title = "YOU DIED. AGAIN.";
         line = dev_.getLastTaunt();
         detail = "deaths: " + to_string(player_.getDeathCount());
-        if (patches_.getActiveCount() > 0) detail += " / update installed: " + patches_.getLastVersion();
-        first = "r or enter / try again";
+        first = "TRY AGAIN";
     } else if (state_ == GameState::ChapterClear) {
         title = chapter_ == 1 && stateTimer_ < 1.5f ? "congratulations!" : "player review";
         line = chapter_ == 1 ? "you finished the tutorial. thats it." : "chapter cleared. suspicious.";
         const int deaths = summary_.getChapterDeaths();
         detail = "chapter deaths: " + to_string(deaths) + " / rating: ";
         detail += deaths == 0 ? "probably luck" : (deaths < 5 ? "concerning" : "very committed");
-        first = "enter / continue suffering";
+        first = "CONTINUE";
     } else if (state_ == GameState::FakeVictory) {
         title = "congratulations!";
         line = "you won. please stop looking at the level.";
         detail = "victory status: extremely real";
-        first = "enter / accept victory";
-        second = "m / suspiciously return to menu";
+        first = "ACCEPT VICTORY";
     } else if (state_ == GameState::Victory) {
         title = finalVictory_ ? "the final hotfix" : "current build cleared";
         line = finalVictory_ ? "you reached the switch. dev has disconnected." : "all 3 chapters done. dev is making more.";
         detail = "run deaths: " + to_string(summary_.getRunDeaths()) + " / retries: "
                  + to_string(summary_.getRetries()) + " / time: "
                  + to_string(static_cast<int>(summary_.getPlayTime())) + "s";
-        first = "enter / credits";
+        first = "CREDITS";
     } else if (state_ == GameState::Credits) {
         title = "blame these people";
         line = "hussain / movement and physical world";
         detail = "arsalan / traps patches and level design";
-        first = "enter / back to menu";
-        second = "esc / back to results";
+        first = "MAIN MENU";
+        second = "BACK TO RESULTS";
     }
-    const float titleX = (960.f - title.size() * 21.7f) * 0.5f;
-    ui_.text(target, title, titleX, 119.f, 36, sf::Color(220, 190, 255));
-    const float lineX = (960.f - line.size() * 10.85f) * 0.5f;
-    ui_.text(target, line, lineX, 185.f, 18);
-    const float detailX = (960.f - detail.size() * 9.64f) * 0.5f;
-    ui_.text(target, detail, detailX, 225.f, 16, sf::Color(185, 175, 205));
+    ui_.centeredText(target, title, 483, 120, 32, sf::Color(5, 14, 25));
+    ui_.centeredText(target, title, 480, 116, 32, accent);
+    const unsigned int lineSize = line.size() > 50 ? 13 : 16;
+    ui_.centeredText(target, line, 480, 180, lineSize, sf::Color(220, 230, 232));
+    ui_.centeredText(target, detail, 480, 218, 13, sf::Color(140, 170, 185));
     if (state_ == GameState::Credits) {
-        ui_.text(target, "abdullah / screens sound and integration", 292.f, 253.f, 16);
-        ui_.text(target, "chapters cleared this run: " + to_string(summary_.getChaptersCleared()), 313.f, 279.f, 14);
-        ui_.text(target, "font: dejavu sans mono / license in assets/fonts", 259.f, 302.f, 14);
+        ui_.centeredText(target, "abdullah / screens sound and integration", 480, 249, 13, sf::Color(220, 230, 232));
+        ui_.centeredText(target, "chapters cleared: " + to_string(summary_.getChaptersCleared())
+            + " / font: dejavu sans mono", 480, 279, 11, sf::Color(140, 170, 185));
     } else if (state_ == GameState::Dead && patches_.getActiveCount() > 0) {
-        ui_.text(target, patchMessage_, 80.f, 273.f, 14, sf::Color(240, 190, 255));
+        ui_.centeredText(target, patchMessage_, 480, 265, 13, accent);
     }
-    ui_.button(target, first, 290.f, 330.f, 380.f, 48.f);
-    ui_.button(target, second, 290.f, 390.f, 380.f, 48.f);
-    ui_.text(target, sounds_.isMuted() ? "s / turn sound on" : "s / mute sound", 400.f, 478.f, 14,
-             sf::Color(175, 165, 195));
+    ui_.menuButton(target, first, "ENT", 290, 330, 380, 48, true);
+    ui_.menuButton(target, second, state_ == GameState::Credits ? "ESC" : "M", 290, 390, 380, 48);
+    ui_.centeredText(target, sounds_.isMuted() ? "S / SOUND OFF" : "S / SOUND ON", 480, 458, 11, sf::Color(140, 170, 185));
+    ui_.centeredText(target, "a game with your best interests at heart. allegedly.", 480, 507, 12, sf::Color(167, 150, 176));
 }
 
 void Game::drawMenu(sf::RenderTarget& target) const {
-    ui_.monitor(target, 456.f, 42.f, false);
+    ui_.text(target, "RB / MAXXING", 26.f, 22.f, 12, sf::Color(112, 178, 180));
+    ui_.text(target, "6 CHAPTERS / ZERO REFUNDS", 714.f, 22.f, 12, sf::Color(112, 178, 180));
+    ui_.centeredText(target, "a game with your best interests at heart. allegedly.",
+                     480.f, 507.f, 12, sf::Color(167, 150, 176));
     if (menuPage_ == MenuPage::Main) {
-        ui_.text(target, "ragebait maxxing", 309.f, 105.f, 36, sf::Color(220, 190, 255));
-        ui_.text(target, "a game with your best interests at heart", 264.f, 163.f, 17);
-        ui_.text(target, "saved deaths: " + to_string(progress_.getTotalDeaths())
-                 + "   saved retries: " + to_string(progress_.getTotalRetries()),
-                 324.f, 193.f, 13, sf::Color(175, 165, 195));
+        ui_.centeredText(target, "TRUST NOTHING. RETRY EVERYTHING.", 480.f, 57.f, 12, sf::Color(129, 205, 191));
+        ui_.centeredText(target, "RAGEBAIT", 484.f, 87.f, 58, sf::Color(6, 15, 28));
+        ui_.centeredText(target, "RAGEBAIT", 480.f, 81.f, 58, sf::Color(219, 248, 220));
+        ui_.centeredText(target, "M A X X I N G", 482.f, 148.f, 27, sf::Color(6, 15, 28));
+        ui_.centeredText(target, "M A X X I N G", 480.f, 144.f, 27, sf::Color(245, 155, 139));
+        ui_.centeredText(target, "DEATHS " + to_string(progress_.getTotalDeaths())
+                 + "   /   RETRIES " + to_string(progress_.getTotalRetries()),
+                 480.f, 198.f, 12, sf::Color(140, 170, 185));
         int chapter = progress_.getHighestUnlocked();
-        if (chapter > 3) chapter = 3;
-        ui_.button(target, "enter / continue chapter " + to_string(chapter), 290.f, 235.f, 380.f, 46.f);
-        ui_.button(target, "l / level select", 290.f, 293.f, 380.f, 46.f);
-        ui_.button(target, "o / settings", 290.f, 351.f, 380.f, 46.f);
-        ui_.button(target, "q / quit while you can", 290.f, 409.f, 380.f, 46.f);
+        if (chapter > 6) chapter = 6;
+        ui_.menuButton(target, "PLAY / CHAPTER " + to_string(chapter), "ENT", 290.f, 235.f, 380.f, 46.f, true);
+        ui_.menuButton(target, "CHAPTER SELECT", "L", 290.f, 293.f, 380.f, 46.f);
+        ui_.menuButton(target, "SETTINGS", "O", 290.f, 351.f, 380.f, 46.f);
+        ui_.menuButton(target, "QUIT WHILE YOU CAN", "Q", 290.f, 409.f, 380.f, 46.f);
+        assets_.draw(target, Art::Player, sf::FloatRect(186.f, 432.f, 39.f, 50.f));
+        assets_.draw(target, Art::Spike, sf::FloatRect(711.f, 458.f, 56.f, 24.f));
+        ui_.text(target, "probably safe", 160.f, 407.f, 10, sf::Color(113, 154, 162));
         return;
     }
     if (menuPage_ == MenuPage::Settings) {
-        ui_.text(target, "reliable settings", 320.f, 125.f, 32, sf::Color(220, 190, 255));
-        ui_.text(target, "these buttons are legally required to work", 274.f, 195.f, 16);
-        ui_.text(target, "progress saves beside the game", 350.f, 238.f, 13,
-                 sf::Color(175, 165, 195));
-        ui_.button(target, sounds_.isMuted() ? "s / sound off" : "s / sound on", 290.f, 285.f, 380.f, 48.f);
-        ui_.button(target, "esc / back", 290.f, 355.f, 380.f, 48.f);
+        ui_.centeredText(target, "SETTINGS", 480, 118, 40, sf::Color(219, 248, 220));
+        ui_.centeredText(target, "these buttons are legally required to work", 480, 194, 15, sf::Color(140, 170, 185));
+        ui_.centeredText(target, "your preferences are saved automatically", 480, 237, 12, sf::Color(140, 170, 185));
+        ui_.menuButton(target, sounds_.isMuted() ? "SOUND / OFF" : "SOUND / ON", "S", 290.f, 285.f, 380.f, 48.f, true);
+        ui_.menuButton(target, "BACK", "ESC", 290.f, 355.f, 380.f, 48.f);
         return;
     }
-    ui_.text(target, "pick your suffering", 307.f, 105.f, 34, sf::Color(220, 190, 255));
+    ui_.centeredText(target, "PICK YOUR SUFFERING", 480, 105, 35, sf::Color(219, 248, 220));
+    ui_.centeredText(target, "six ways to question your decisions", 480, 162, 13, sf::Color(140, 170, 185));
     for (int i = 0; i < 6; ++i) {
         const int chapter = i + 1;
         const float x = i % 2 == 0 ? 190.f : 490.f;
         const float y = 220.f + (i / 2) * 62.f;
-        string words = to_string(chapter) + " / ";
-        if (chapter > 3) words += "coming soon";
-        else if (!progress_.isUnlocked(chapter)) words += "locked";
+        string words;
+        if (!progress_.isUnlocked(chapter)) words += "locked";
         else if (progress_.isCompleted(chapter)) words += "cleared";
         else words += "available";
-        ui_.button(target, words, x, y, 280.f, 46.f);
+        ui_.menuButton(target, words, to_string(chapter), x, y, 280.f, 46.f,
+                       progress_.isUnlocked(chapter));
     }
-    ui_.button(target, "esc / back", 290.f, 420.f, 380.f, 44.f);
+    ui_.menuButton(target, "BACK", "ESC", 290.f, 420.f, 380.f, 44.f);
 }
 
 void Game::draw(sf::RenderTarget& target) const {
     level_.draw(target);
+    if (state_ == GameState::Playing) {
+        // little signs are part of the joke, none of these labels change collision
+        if (chapter_ == 4) {
+            if (!hasGhost()) ui_.text(target, "stand on plate, press R. let your ghost hold it.", 180, 335, 12);
+            ui_.text(target, level_.isGhostDoorOpen() ? "door open" : "needs a helper", 608, 190, 12);
+        } else if (chapter_ == 5) {
+            if (!hasPopupPlatform()) {
+                ui_.text(target, "drag the popup across the gap. drop it low enough to jump on.", 120, 300, 12);
+                if (!popup_.isOpen()) ui_.text(target, "closed it? R brings it back.", 30, 327, 12);
+            }
+        } else if (chapter_ == 6) {
+            const DeveloperBoss& boss = level_.getBoss();
+            ui_.text(target, boss.isReadyForShutdown() ? "shutdown unlocked ->" :
+                (boss.getPhase() == 0 ? "dev round 1: dodge the marked lanes" : "dev round 2: faster lanes. keep moving."),
+                290, 310, 13);
+        } else if (!level_.hasBetrayed()) {
+            ui_.text(target, chapter_ == 2 ? "save + shortcut ->" : "totally safe ->", 532.f, 402.f, 11,
+                     sf::Color(185, 205, 190));
+            ui_.text(target, "finish", 800.f, 395.f, 12, sf::Color(150, 240, 170));
+        } else {
+            ui_.text(target, "actual exit ->", 790.f, 385.f, 12, sf::Color(245, 150, 185));
+        }
+    }
     if (state_ != GameState::Menu) player_.draw(target);
     if (hasGhost()) ghost_.draw(target);
     if (interfacePopupEnabled_ && state_ != GameState::Menu) popup_.draw(target, ui_);

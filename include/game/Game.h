@@ -59,6 +59,8 @@ public:
     bool wantsQuit() const;
     bool isReady() const;
     int getCurrentChapter() const;
+    sf::FloatRect getPlayerBounds() const;
+    float getBossWarningX() const;
     int getHighestUnlockedChapter() const;
     MenuPage getMenuPage() const;
     bool isSoundMuted() const;
@@ -81,6 +83,7 @@ public:
     GameState getState() const;
 
 private:
+    AssetManager assets_; // first member so textures outlive every object using them
     Player player_;
     Level level_;
     DeveloperDirector dev_;
@@ -105,7 +108,6 @@ private:
     float stateTimer_;
     string message_;
     string patchMessage_;
-    string patchVersion_;
     MenuPage menuPage_;
 
     void loadChapter(int n);

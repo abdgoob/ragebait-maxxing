@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(SFML 2.5 COMPONENTS system window graphics audio REQUIRED)
 
 set(GAME_SOURCES
+    src/developer/DeveloperBoss.cpp
     src/core/AssetManager.cpp
     src/game/Game.cpp
     src/game/AttemptRecorder.cpp
@@ -51,7 +52,7 @@ add_custom_command(TARGET ragebait_maxxing POST_BUILD
 option(RAGEBAIT_BUILD_TESTS "build the game flow checks" OFF)
 if(RAGEBAIT_BUILD_TESTS)
     enable_testing()
-    add_executable(game_flow_checks tests/game_flow.cpp ${GAME_SOURCES})
+    add_executable(game_flow_checks tests/game_flow.cpp tests/troll_checks.cpp tests/later_chapters.cpp ${GAME_SOURCES})
     target_include_directories(game_flow_checks PRIVATE ${CMAKE_SOURCE_DIR}/include)
     target_link_libraries(game_flow_checks PRIVATE sfml-system sfml-window sfml-graphics sfml-audio)
     add_custom_command(TARGET game_flow_checks POST_BUILD
